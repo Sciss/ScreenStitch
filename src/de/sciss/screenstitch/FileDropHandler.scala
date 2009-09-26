@@ -1,3 +1,11 @@
+/**
+ * 	FileDropHandler.scala
+ * 	(ScreenStitch)
+ * 
+ * 	(C)opyright 2009 Hanns Holger Rutz. All rights reserved.
+ * 
+ *	Published under the GNU Lesser General Public License (LGPL) v3
+ */
 package de.sciss.screenstitch
 
 import _root_.java.awt.datatransfer.{ DataFlavor, Transferable }

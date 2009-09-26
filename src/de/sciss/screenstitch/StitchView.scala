@@ -1,3 +1,11 @@
+/**
+ * 	StitchView.scala
+ * 	(ScreenStitch)
+ * 
+ * 	(C)opyright 2009 Hanns Holger Rutz. All rights reserved.
+ * 
+ *	Published under the GNU Lesser General Public License (LGPL) v3
+ */
 package de.sciss.screenstitch
 
 import _root_.java.awt.{ BasicStroke, Color, Cursor, Dimension, EventQueue, Graphics,
@@ -6,26 +14,28 @@ import _root_.java.awt.{ BasicStroke, Color, Cursor, Dimension, EventQueue, Grap
 import _root_.java.awt.event.{ MouseEvent, KeyAdapter, KeyEvent }
 import _root_.java.awt.geom.{ GeneralPath }
 import _root_.java.awt.image.{ BufferedImage }
-import _root_.java.io.{ File, FileOutputStream, IOException, RandomAccessFile }
+import _root_.java.io.{ File, FileOutputStream, IOException, DataInputStream,
+	DataOutputStream, RandomAccessFile }
 import _root_.java.util.{ Timer, TimerTask }
 import _root_.javax.imageio.{ ImageIO }
-import _root_.javax.swing.{ JComponent, JRootPane, JViewport, SwingUtilities }
+import _root_.javax.swing.{ JComponent, JPanel, JRootPane, JViewport, SwingUtilities }
 import _root_.javax.swing.event.{ MouseInputAdapter }
 
 import _root_.scala.collection.immutable.{ SortedSet, TreeSet }
 import _root_.scala.collection.mutable.{ ListBuffer }
 
 class StitchView
-extends JComponent {
+extends JComponent // JPanel // JComponent
+// WARNING: bug in JComponent : when a JComponent is inside a JPanel
+// which is the view of a scrollpane's viewport, the display is truncted
+// to 16384 pixels!!! for whatever reason, subclassing JPanel instead
+// fixes the problem
+with Zoomable {
 	private var dirty = false
 	private val jitter = 32
-	private var zoom = 1.0f
-	private var pntBg: Paint = _
 	private val shpStitch = new GeneralPath()
 	private val strkStitch = new BasicStroke( 6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER )
 	private var jitPt: scala.collection.mutable.Sequence[ Point ] = _	
-	private val virtualRect = new Rectangle( 0, 0, 400, 400 )
-	private val cookie = 0x5354495400000000L
 	
 	private var viewPort: Option[ JViewport ] = None
 
@@ -43,20 +53,11 @@ extends JComponent {
 	private val collImg     = ListBuffer[ StitchImage ]()
 	private val stitches 	= ListBuffer[ Stitch ]()
 	
-	// constructor
+	// ---- constructor ----
 	{
 		recalcBounds
 //		setPreferredSize( new Dimension( 800, 800 ))
-		
-		val img = new BufferedImage( 32, 32, BufferedImage.TYPE_INT_ARGB )
-		
-		for( x <- (0 until img.getWidth) ) {
-			for( y <- (0 until img.getHeight) ) {
-				img.setRGB( x, y, if( ((x >> 4) ^ (y >> 4)) == 0 ) 0xFF9F9F9F else 0xFF7F7F7F ) 
-			}
-		}
-		
-		pntBg = new TexturePaint( img, new Rectangle( 0, 0, img.getWidth, img.getHeight ))
+
 		shpStitch.moveTo( -30, 30 )
 		shpStitch.quadTo( -10, -10, 30, -30 )
 		shpStitch.moveTo( -30, -30 )
@@ -134,12 +135,15 @@ extends JComponent {
 				}
 			}
 		})
+		
+		setOpaque( false )
 	}
 	
 	def isDirty = dirty
 	
 	private def makeDirty : Unit = changeModified( true )
-	private def makeTidy  : Unit = changeModified( false )
+	
+	def makeTidy  : Unit = changeModified( false )
 	
 	private def changeModified( b: Boolean ) {
 		if( dirty != b ) {
@@ -149,48 +153,40 @@ extends JComponent {
 	}
 	
 	@throws( classOf[ IOException ])
-	def save( file: File ) {
-		file.delete()
-		val raf = new RandomAccessFile( file, "rw" )
-		raf.writeLong( cookie ) // cookie and version
-		raf.writeInt( collImg.size )
+	def write( oos: DataOutputStream ) {
+		oos.writeInt( collImg.size )
 		collImg.foreach( img => {
-			raf.writeUTF( img.fileName )
-			raf.writeInt( img.bounds.x )
-			raf.writeInt( img.bounds.y )
+			oos.writeUTF( img.fileName )
+			oos.writeInt( img.bounds.x )
+			oos.writeInt( img.bounds.y )
 		})
-		raf.writeInt( stitches.size )
+		oos.writeInt( stitches.size )
 		stitches.foreach( s => {
-			raf.writeInt( collImg.indexOf( s.img1 ))
-			raf.writeInt( collImg.indexOf( s.img2 ))
+			oos.writeInt( collImg.indexOf( s.img1 ))
+			oos.writeInt( collImg.indexOf( s.img2 ))
 		})
-		raf.close
-		makeTidy
 	}
 	
 	@throws( classOf[ IOException ])
-	def load( file: File ) {
-		val raf = new RandomAccessFile( file, "r" )
-		if( raf.readLong != cookie ) throw new IOException( "Unrecognized format" )
+	def read( ois: DataInputStream ) {
 		clear
-		val numImages = raf.readInt
+		val numImages = ois.readInt
 		for( i <- (0 until numImages) ) {
-			val fileName = raf.readUTF
-			val x = raf.readInt
-			val y = raf.readInt
+			val fileName = ois.readUTF
+			val x = ois.readInt
+			val y = ois.readInt
 			val bimg = ImageIO.read( new File( fileName ).toURL )
 			val img = new StitchImage( fileName, bimg )
 			img.bounds.setLocation( x, y )
 			collImg += img
 		}
-		val numStitches = raf.readInt
+		val numStitches = ois.readInt
 		for( i <- (0 until numStitches) ) {
-			val idx1 = raf.readInt
-			val idx2 = raf.readInt
+			val idx1 = ois.readInt
+			val idx2 = ois.readInt
 			val stitch = Stitch( collImg( idx1 ), collImg( idx2 ))
 			stitches += stitch
 		}
-		raf.close
 		recalcBounds
 		repaint()
 	}
@@ -315,21 +311,10 @@ extends JComponent {
 		(dr * dr + dg * dg + db * db) / 195075.0 // actually not RMS but faster, so who cares
 	}
 	
-	def screenToVirtual( scrPt: Point ) =
-		new Point( (scrPt.x / zoom).toInt + virtualRect.x,
-		           (scrPt.y / zoom).toInt + virtualRect.y )
-	
 	def setViewPort( vp: JViewport ) {
 		viewPort = Some( vp )
 	}
-	
-	def setZoom( x: Float ) {
-		if( zoom != x ) {
-			zoom = x
-			updateScreenSize
-		}
-	}
-	
+
 	def removeImage( img: StitchImage ) {
 		makeDirty
 		collImg -= img
@@ -357,24 +342,14 @@ extends JComponent {
 		}
 	}
 	
-	private def setVirtualBounds( x: Int, y: Int, w: Int, h: Int ) {
-		if( (virtualRect.x == x) && (virtualRect.y == y) &&
-		    (virtualRect.width == w) && (virtualRect.height == h) ) return
-		
-		virtualRect.setBounds( x, y, w, h )
-		updateScreenSize
-	}
-
-	private def updateScreenSize {
-		val scrW = (virtualRect.width * zoom).toInt
-		val scrH = (virtualRect.height * zoom).toInt
-		val d    = new Dimension( scrW, scrH )
+	def screenSizeUpdated( d: Dimension ) {
 		setPreferredSize( d )
 		setSize( d )
 		revalidate()
 	}
 
 	private def recalcBounds {
+//println( "---1" )
 		if( collImg.isEmpty ) {
 			setVirtualBounds( 0, 0, 400, 400 )
 			return
@@ -392,6 +367,7 @@ extends JComponent {
 			maxY = Math.max( maxY, img.bounds.y + img.bounds.height )
 		})
 		
+//println( "---2 " + minX + ", " + minY + ", " + maxX + ", " + maxY )
 		setVirtualBounds( minX - 200, minY - 200, maxX - minX + 400, maxY - minY + 400 )
 	}
 	
@@ -411,10 +387,8 @@ extends JComponent {
 		if( extras ) {
 			if( beep > System.currentTimeMillis ) {
 				g2.setColor( beepColor )
-			} else {
-				g2.setPaint( pntBg )
+				g2.fillRect( 0, 0, virtualRect.width, virtualRect.height )
 			}
-			g2.fillRect( 0, 0, virtualRect.width, virtualRect.height )
 		}
 		g2.translate( -virtualRect.x, -virtualRect.y )
 		

@@ -1,15 +1,28 @@
+/**
+ * 	ScreenStitch.scala
+ * 	(ScreenStitch)
+ * 
+ * 	(C)opyright 2009 Hanns Holger Rutz. All rights reserved.
+ * 
+ *	Published under the GNU Lesser General Public License (LGPL) v3
+ */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ BorderLayout, Dimension, EventQueue, FileDialog, Toolkit }
-import _root_.java.awt.event.{ ActionEvent, InputEvent, KeyEvent, WindowAdapter,
+import _root_.java.awt.{ BorderLayout, Color, Dimension, EventQueue, FileDialog, Toolkit }
+import _root_.java.awt.event.{ ActionEvent, InputEvent, KeyEvent, MouseAdapter, MouseEvent, WindowAdapter,
 							   WindowEvent }
-import _root_.java.io.{ File, IOException }
-import _root_.javax.swing.{ AbstractAction, Action, JFrame, JMenu, JMenuBar, JMenuItem,
-							JOptionPane, JScrollPane, JSeparator, JSlider, KeyStroke,
-							WindowConstants }
+import _root_.java.io.{ BufferedInputStream, BufferedOutputStream, File,
+	FileInputStream, FileOutputStream, IOException, DataInputStream, DataOutputStream }
+import _root_.javax.swing.{ AbstractAction, AbstractButton, Action, JCheckBoxMenuItem, JComponent, JFrame, JMenu, JMenuBar, JMenuItem,
+							JOptionPane, JPanel, JScrollPane, JSeparator, JSlider,
+							JViewport, KeyStroke, OverlayLayout, UIManager, WindowConstants }
 import _root_.javax.swing.event.{ ChangeEvent, ChangeListener }
 
 object ScreenStitch {
+//	val cookie = 0x5354495400000000L
+	val cookie = 0x53544954
+	val version = 1
+	
 	def main( args: Array[ String ]) {
 		System.setProperty( "apple.laf.useScreenMenuBar", "true" )
 		EventQueue.invokeLater( new Runnable { def run { new ScreenStitch }})
@@ -24,15 +37,66 @@ class ScreenStitch {
 	
 	private val frame	= new JFrame()
 	private val view	= new StitchView
+	private val poly	= new PolylineZoomView()
 	private var docFile: Option[ File ] = None
+	private var miEditPoly: JCheckBoxMenuItem = _
 	
 	// constructor
 	{
-		val cp = frame.getContentPane
-		val ggScroll = new JScrollPane( view )
-		view.setViewPort( ggScroll.getViewport )
-		view.setDirtyAction( b => setDirty( b ))
+ //       UIManager.setLookAndFeel( "javax.swing.plaf.metal.MetalLookAndFeel" )
 		
+		val cp = frame.getContentPane
+		val checker = new CheckerBackground( 32 )
+
+		poly.setVisible( false )
+		poly.setFillColor( -1, Color.green )
+		poly.setStrokeColor( Color.green )
+		poly.setSelectionColor( Color.red )
+		poly.setThumbSize( -1, 10 )
+		poly.setStrokeWidth( 3 )
+		poly.addMouseListener( new MouseAdapter {
+			override def mousePressed( e: MouseEvent ) {
+				if( e.isAltDown ) {
+//					EventQueue.invokeLater( new Runnable { def run {
+						poly.deleteSelected
+//					}})
+				} else if( e.getClickCount == 2 ) {
+					poly.insertFromScreen( e.getPoint, true )
+				}
+			}
+		})
+
+		val ggOverlay = new JPanel()
+//val ggOverlay = new JComponent() {}
+		ggOverlay.setLayout( new OverlayLayout( ggOverlay ))
+		// note: add front-to-back
+		ggOverlay.add( poly )
+		ggOverlay.add( view )
+		ggOverlay.add( checker )
+		
+//		// stupid shit
+//		view.addSlave( new Zoomable {
+//			def screenSizeUpdated( d: Dimension ) {
+//				ggOverlay.setPreferredSize( d )
+//				ggOverlay.setSize( d )
+//				ggOverlay.revalidate()
+//			}
+//		})
+		
+		val ggScroll = new JScrollPane( ggOverlay )
+//		val ggScroll = new JScrollPane( view )
+		val vp = ggScroll.getViewport
+		view.setViewPort( vp )
+		view.setDirtyAction( b => setDirty( b ))
+		view.addSlave( checker )
+		view.addSlave( poly )
+		
+//vp.setScrollMode( JViewport.SIMPLE_SCROLL_MODE )
+//ggOverlay.setDoubleBuffered( false )
+//view.setDoubleBuffered( false )
+//checker.setDoubleBuffered( false )
+//poly.setDoubleBuffered( false )
+
 		cp.add( ggScroll, BorderLayout.CENTER )
 		ggScroll.setPreferredSize( new Dimension( 400, 400 ))
 		
@@ -40,7 +104,7 @@ class ScreenStitch {
 		ggZoom.setValue( ggZoom.getMaximum )
 		ggZoom.addChangeListener( new ChangeListener {
 			def stateChanged( e: ChangeEvent ) {
-				view.setZoom( ScreenStitch.linexp( ggZoom.getValue, 0, 0x10000, 0.125, 1 ).toFloat )
+				view.setZoom( ScreenStitch.linexp( ggZoom.getValue, 0, 0x10000, 0.03125, 1 ).toFloat )
 			}
 		})
 		
@@ -48,7 +112,7 @@ class ScreenStitch {
 		
 		val meta = Toolkit.getDefaultToolkit.getMenuShortcutKeyMask()
 		val mb = new JMenuBar
-		val m  = new JMenu( "File" )
+		var m  = new JMenu( "File" )
 		mb.add( m )
 		m.add( new JMenuItem( new AbstractAction( "New" ) {
 			putValue( Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke( KeyEvent.VK_N, meta ))
@@ -75,12 +139,31 @@ class ScreenStitch {
 				saveAsDoc
 			}
 		}))
+		m.add( new JSeparator )
 		m.add( new JMenuItem( new AbstractAction( "Export to PDF..." ) {
 			def actionPerformed( e: ActionEvent ) {
 				exportToPDF
 			}
 		}))
-		
+
+		m  = new JMenu( "Tools" )
+		mb.add( m )
+		m.add( new JMenuItem( new AbstractAction( "Create Polyline" ) {
+			def actionPerformed( e: ActionEvent ) {
+				createPolyLine
+			}
+		}))
+
+		m  = new JMenu( "View" )
+		mb.add( m )
+		miEditPoly = new JCheckBoxMenuItem( new AbstractAction( "Edit Polyline" ) {
+			def actionPerformed( e: ActionEvent ) {
+				val but = e.getSource.asInstanceOf[ AbstractButton ]
+			    togglePolyVisibility( but.isSelected )
+			}
+		})
+		m.add( miEditPoly )
+
 		frame.setJMenuBar( mb )
 		frame.pack
 		frame.setLocationRelativeTo( null )
@@ -95,6 +178,20 @@ class ScreenStitch {
 		updateTitle
 		frame.setVisible( true )
 		frame.toFront
+	}
+	
+	private def togglePolyVisibility( onOff: Boolean ) {
+		poly.setVisible( onOff )
+		miEditPoly.setSelected( onOff )
+	}
+
+	private def createPolyLine {
+		if( poly.getNumNodes > 0 ) return
+		
+		poly.setValues( List( 0.0f, 0.25f, 0.5f, 0.75f, 1.0f ).toArray,
+		                List( 0.0f, 1.0f, 0.25f, 0.0f, 0.5f ).toArray )
+
+		togglePolyVisibility( true )
 	}
 	
 	private def setDirty( b: Boolean ) {
@@ -135,7 +232,7 @@ class ScreenStitch {
 		val df = queryLoadFile( "Open" )
 		if( df.isDefined ) {
 			try {
-				view.load( df.get )
+				load( df.get )
 				docFile = df
 				updateTitle
 			}
@@ -146,9 +243,18 @@ class ScreenStitch {
 	}
 	
 	private def displayError( title: String, e: Throwable ) {
-		val msg = e.getClass.toString + "\n" +
-			(if( e.getMessage == null ) "" else e.getMessage + "\n")
+		var msg = "<HTML><BODY><P><B>" + e.getClass.getName + "<BR>" +
+			(if( e.getMessage == null ) "" else e.getMessage) + "</B></P><UL>"		
 			
+        val trace = e.getStackTrace()
+		val numTraceLines = 4
+        for( i <- (0 until Math.min( numTraceLines, trace.length ))) {
+        	msg = msg + "<LI>at " + trace( i ) + "</LI>"
+        }
+        if( trace.length > 3 ) {
+            msg = msg + "<LI>...</LI>"
+        }
+		msg = msg + "</UL></BODY></HTML>"
 		JOptionPane.showMessageDialog( frame, msg, title, JOptionPane.ERROR_MESSAGE )
 	}
 	
@@ -163,7 +269,7 @@ class ScreenStitch {
 	private def save( df: Option[ File ]) : Boolean = {
 		if( df.isEmpty ) return false
 		try {
-			view.save( df.get )
+			save( df.get )
 			docFile = df
 			updateTitle
 			true
@@ -172,7 +278,48 @@ class ScreenStitch {
 			case e => { displayError( "Save", e ); false }
 		}
 	}
-	
+		
+	@throws( classOf[ IOException ])
+	private def save( file: File ) {
+		file.delete()
+		val oos = new DataOutputStream( new BufferedOutputStream( new FileOutputStream( file )))
+		oos.writeInt( ScreenStitch.cookie )
+		oos.writeInt( ScreenStitch.version )
+		view.write( oos )
+		// write polyline
+		val numNodes = poly.getNumNodes
+		oos.writeInt( numNodes )
+		for( i <- (0 until numNodes) ) {
+			val n = poly.getNode( i )
+			oos.writeFloat( n.x )
+			oos.writeFloat( n.y )
+		}
+		oos.close
+		view.makeTidy
+	}
+
+	@throws( classOf[ IOException ])
+	def load( file: File ) {
+		val ois = new DataInputStream( new BufferedInputStream( new FileInputStream( file )))
+		if( ois.readInt != ScreenStitch.cookie ) throw new IOException( "Unrecognized format" )
+		val fileVersion = ois.readInt
+		if( fileVersion > ScreenStitch.version ) throw new IOException( "File version (" + fileVersion + ") too new" )
+		view.read( ois )
+		// read polyline
+		if( fileVersion >= 1 ) {
+			val numNodes = ois.readInt
+			val nxs = new Array[ Float ]( numNodes )
+			val nys = new Array[ Float ]( numNodes )
+			for( i <- (0 until numNodes) ) {
+				nxs( i ) = ois.readFloat
+				nys( i ) = ois.readFloat
+			}
+			poly.setValues( nxs, nys )
+		}
+		ois.close
+		view.makeTidy
+	}
+
 	private def updateTitle {
 		frame.setTitle( "Screen Stitch : " + (if( docFile.isDefined ) docFile.get.getName else "Untitled") )
 	}
