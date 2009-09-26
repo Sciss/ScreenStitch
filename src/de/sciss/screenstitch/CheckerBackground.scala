@@ -33,6 +33,7 @@ with Zoomable {
 		val g2 = g.asInstanceOf[ Graphics2D ]
         val atOrig	= g2.getTransform
         g2.scale( zoom, zoom )
+		g2.translate( -clipLeftPx, -clipTopPx )
         g2.setPaint( pntBg )
         g2.fillRect( 0, 0, virtualRect.width, virtualRect.height )
 		g2.setTransform( atOrig )

@@ -31,15 +31,16 @@ with Zoomable {
 
 //		g2.translate( ins.left, ins.top )
 		g2.scale( zoom, zoom )
+		g2.translate( -clipLeftPx, -clipTopPx )
 		paintKnob( g2, cw, ch )
 		g2.setTransform( atOrig )
 	}
 	
 	override protected def screenToVirtual( pt: Point2D ) : Point2D = {
-		new Point2D.Double( pt.getX / zoom, pt.getY / zoom )
+		new Point2D.Double( pt.getX / zoom + clipLeftPx, pt.getY / zoom + clipTopPx )
 	}
 	
 	override protected def screenToVirtual( r: Rectangle2D ) : Rectangle2D = {
-		new Rectangle2D.Double( r.getX / zoom, r.getY / zoom, r.getWidth / zoom, r.getHeight / zoom )
+		new Rectangle2D.Double( r.getX / zoom + clipLeftPx, r.getY / zoom + clipTopPx, r.getWidth / zoom, r.getHeight / zoom )
 	}
 }

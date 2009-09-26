@@ -8,14 +8,16 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ BorderLayout, Color, Dimension, EventQueue, FileDialog, Toolkit }
-import _root_.java.awt.event.{ ActionEvent, InputEvent, KeyEvent, MouseAdapter, MouseEvent, WindowAdapter,
-							   WindowEvent }
+import _root_.java.awt.{ BorderLayout, Color, Dimension, EventQueue, FileDialog, Font,
+	Graphics2D, Toolkit }
+import _root_.java.awt.event.{ ActionEvent, InputEvent, KeyEvent, MouseAdapter,
+	MouseEvent, WindowAdapter, WindowEvent }
 import _root_.java.io.{ BufferedInputStream, BufferedOutputStream, File,
 	FileInputStream, FileOutputStream, IOException, DataInputStream, DataOutputStream }
-import _root_.javax.swing.{ AbstractAction, AbstractButton, Action, JCheckBoxMenuItem, JComponent, JFrame, JMenu, JMenuBar, JMenuItem,
-							JOptionPane, JPanel, JScrollPane, JSeparator, JSlider,
-							JViewport, KeyStroke, OverlayLayout, UIManager, WindowConstants }
+import _root_.javax.swing.{ AbstractAction, AbstractButton, Action, JCheckBoxMenuItem,
+	JComponent, JFrame, JMenu, JMenuBar, JMenuItem, JOptionPane, JPanel, JScrollPane,
+	JSeparator, JSlider, JViewport, KeyStroke, OverlayLayout, UIManager, SwingConstants,
+	WindowConstants }
 import _root_.javax.swing.event.{ ChangeEvent, ChangeListener }
 
 object ScreenStitch {
@@ -54,6 +56,7 @@ class ScreenStitch {
 		poly.setSelectionColor( Color.red )
 		poly.setThumbSize( -1, 10 )
 		poly.setStrokeWidth( 3 )
+		poly.setFont( new Font( "Helvetica", Font.PLAIN, 21 ))
 		poly.addMouseListener( new MouseAdapter {
 			override def mousePressed( e: MouseEvent ) {
 				if( e.isAltDown ) {
@@ -100,16 +103,30 @@ class ScreenStitch {
 		cp.add( ggScroll, BorderLayout.CENTER )
 		ggScroll.setPreferredSize( new Dimension( 400, 400 ))
 		
-		val ggZoom = new JSlider( 0, 0x10000 )
-		ggZoom.setValue( ggZoom.getMaximum )
+		val ggZoom = new JSlider( SwingConstants.HORIZONTAL, 0, 0x10000, 0x10000 )
 		ggZoom.addChangeListener( new ChangeListener {
 			def stateChanged( e: ChangeEvent ) {
 				view.setZoom( ScreenStitch.linexp( ggZoom.getValue, 0, 0x10000, 0.03125, 1 ).toFloat )
 			}
 		})
-		
 		cp.add( ggZoom, BorderLayout.SOUTH )
 		
+		val ggClipLeft = new JSlider( SwingConstants.HORIZONTAL, 0, 0x10000, 0 )
+		ggClipLeft.addChangeListener( new ChangeListener {
+			def stateChanged( e: ChangeEvent ) {
+				view.clipLeft( ggClipLeft.getValue.toFloat / 0x10000 );
+			}
+		})
+		cp.add( ggClipLeft, BorderLayout.NORTH )
+
+		val ggClipTop = new JSlider( SwingConstants.VERTICAL, 0, 0x10000, 0 )
+		ggClipTop.addChangeListener( new ChangeListener {
+			def stateChanged( e: ChangeEvent ) {
+				view.clipTop( ggClipTop.getValue.toFloat / 0x10000 );
+			}
+		})
+		cp.add( ggClipTop, BorderLayout.WEST )
+
 		val meta = Toolkit.getDefaultToolkit.getMenuShortcutKeyMask()
 		val mb = new JMenuBar
 		var m  = new JMenu( "File" )
@@ -153,6 +170,11 @@ class ScreenStitch {
 				createPolyLine
 			}
 		}))
+		m.add( new JMenuItem( new AbstractAction( "Add Kilometer Labels" ) {
+			def actionPerformed( e: ActionEvent ) {
+				addKilometerLabels
+			}
+		}))
 
 		m  = new JMenu( "View" )
 		mb.add( m )
@@ -194,6 +216,60 @@ class ScreenStitch {
 		togglePolyVisibility( true )
 	}
 	
+	private def addKilometerLabels {
+		val numNodes = poly.getNumNodes
+		if( numNodes < 2 ) return
+		val totalKMo = queryNumber( "Add Kilometer Labels", "Enter the total polyline\nlength in km:", 100 )
+		if( totalKMo.isEmpty ) return
+		val totalKM = totalKMo.get
+		if( totalKM <= 0.0 ) return
+		val spaceKMo = queryNumber( "Add Kilometer Labels", "Enter the spacing between\nlabels in km:", 5 )
+		if( spaceKMo.isEmpty ) return
+		val spaceKM = spaceKMo.get
+		if( spaceKM <= 0.0 || spaceKM >= totalKM ) return
+		
+		var n1 = poly.getNode( 0 )
+		var lineSum = 0.0
+		for( i <- (1 until numNodes) ) {
+			val n2 = poly.getNode( i )
+			val dx = n2.x - n1.x
+			val dy = n2.y - n1.y
+			val hyp = Math.sqrt( dx*dx + dy*dy )
+			lineSum += hyp
+			n1 = n2
+		}
+		val scale = totalKM / lineSum
+		
+		val fnt = poly.getFont
+		val g2 = poly.getGraphics.asInstanceOf[ Graphics2D ]
+		val frc = g2.getFontRenderContext()
+		
+		lineSum = 0.0
+		var labelCnt = 1
+		n1 = poly.getNode( 0 )
+		for( i <- (1 until numNodes) ) {
+			val n2 = poly.getNode( i )
+			val dx = n2.x - n1.x
+			val dy = n2.y - n1.y
+			val hyp = Math.sqrt( dx*dx + dy*dy )
+			lineSum += hyp
+			val lineSumSc = lineSum * scale
+			if( lineSumSc >= (spaceKM * labelCnt) ) {
+				val txt = Math.round( lineSumSc ).toString
+				val r = fnt.getStringBounds( txt, frc )
+				poly.setThumbWidth( i, r.getWidth.toFloat + 16 )
+				poly.setThumbHeight( i, r.getHeight.toFloat + 8 )
+				poly.setFillColor( i, Color.black )
+				poly.setLabel( i, txt )
+//println( "setLabel( " + i + ", " + Math.round( lineSum ).toString )
+				labelCnt = (lineSumSc / spaceKM).toInt + 1
+			}
+			n1 = n2
+		}
+		
+		g2.dispose
+	}
+	
 	private def setDirty( b: Boolean ) {
 		val rp = frame.getRootPane
 		rp.putClientProperty( "windowModified", new java.lang.Boolean( b ))
@@ -209,6 +285,13 @@ class ScreenStitch {
 		if( res == 0 ) {
 			saveDoc
 		} else res == 2
+	}
+	
+	private def queryNumber( title: String, msg: String, num: Double ) : Option[ Double ] = {
+		val res = JOptionPane.showInputDialog( frame,
+		    msg, title, JOptionPane.QUESTION_MESSAGE, null, null, num )
+		    
+		 if( res == null ) None else Some( res.toString.toDouble )
 	}
 	
 	private def confirmOverwrite( title: String, f: File ) : Boolean = {

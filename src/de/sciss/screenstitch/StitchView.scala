@@ -384,6 +384,7 @@ with Zoomable {
 		g2.setRenderingHint( RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF )
 		
 		g2.scale( zoom, zoom )
+		g2.translate( -clipLeftPx, -clipTopPx )
 		if( extras ) {
 			if( beep > System.currentTimeMillis ) {
 				g2.setColor( beepColor )
