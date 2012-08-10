@@ -42,7 +42,7 @@ with Zoomable {
 	
 	private var alignThread: Option[ Thread ] = None
 	
-	private var dirtyAction: Option[ Function1[ Boolean, Unit ]] = None
+	private var dirtyAction: Option[ Boolean => Unit ] = None
 	
 	@volatile private var alignKeepRunning = true
 	private var beep = 0L
@@ -88,8 +88,13 @@ with Zoomable {
 					if( e.isAltDown ) {
 						removeImage( img1 )
 					} else if( e.getClickCount == 2 ) {
-						collImg.find( img => (img != img1) && img.bounds.contains( virtPt ))
-							.foreach( autoAlign( _, img1 ))
+						collImg.find( img => (img != img1) && img.bounds.contains( virtPt )).foreach { img2 =>
+                     if( areStitched( img1, img2 )) {
+                        unstitch( img1, img2 )
+                     } else {
+                        autoAlign( img1, img2 )
+                     }
+                  }
 					} else {
 						drag = Some( new StitchDrag( img1, e ))
 					}
@@ -151,7 +156,6 @@ with Zoomable {
 		}
 	}
 	
-	@throws( classOf[ IOException ])
 	def write( oos: DataOutputStream ) {
 		oos.writeInt( collImg.size )
 		collImg.foreach( img => {
@@ -166,7 +170,6 @@ with Zoomable {
 		})
 	}
 	
-	@throws( classOf[ IOException ])
 	def read( ois: DataInputStream ) {
 		clear()
 		val numImages = ois.readInt
@@ -204,7 +207,6 @@ with Zoomable {
 		dirtyAction = Some( fun )
 	}
 	
-	@throws( classOf[ IOException ])
 	def createPDF( file: File ) {
 		val d		= getPreferredSize 
 		val pageSize= new text.Rectangle( 0, 0, d.width, d.height )
@@ -220,10 +222,44 @@ with Zoomable {
 		cb.addTemplate( tp, 0, 0 )
 		doc.close()
 	}
-	
+
+   def createPNG( file: File ) {
+      if( collImg.isEmpty ) return
+
+      val r    = calcMinimumRectangle
+//      println( "r = " + r )
+      val w    = r.width
+      val h    = r.height
+      val img  = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR )
+      val g    = img.createGraphics()
+      g.setColor( Color.white )  // XXX TODO could be customisable
+      g.fillRect( 0, 0, w, h )
+      collImg.foreach { i =>
+         val b = i.bounds
+         g.drawImage( i.bimg, b.x - r.x, b.y - r.y, this )
+      }
+      g.dispose()
+      ImageIO.write( img, "png", file )
+   }
+
+   def areStitched( img1: StitchImage, img2: StitchImage ) : Boolean =
+      img1.stitches.exists( s => s.img1 == img2 || s.img2 == img2 )
+
+   def unstitch( img1: StitchImage, img2: StitchImage ) {
+      def remove( img: StitchImage ) {
+         val st = img.stitches.filter( s => (s.img1 == img1 && s.img2 == img2) || (s.img1 == img2 && s.img2 == img1) )
+         img.stitches -- st
+         stitches -- st
+      }
+
+      remove( img1 )
+      remove( img2 )
+      repaint()
+   }
+
 	def autoAlign( img1: StitchImage, img2: StitchImage ) {
 		// only one stitch per pair allowed
-		if( img1.stitches.exists( s => s.img1 == img2 || s.img2 == img2 )) return
+		if( areStitched( img1, img2 )) return
 		
 		alignThread = Some( new Thread( new Runnable {
 			def run() {
@@ -347,27 +383,32 @@ with Zoomable {
 		revalidate()
 	}
 
+   private def calcMinimumRectangle : Rectangle = {
+      var minX = Int.MaxValue
+      var minY = Int.MaxValue
+      var maxX = Int.MinValue
+      var maxY = Int.MinValue
+
+      collImg.foreach { img =>
+         minX = math.min( minX, img.bounds.x )
+         minY = math.min( minY, img.bounds.y )
+         maxX = math.max( maxX, img.bounds.x + img.bounds.width )
+         maxY = math.max( maxY, img.bounds.y + img.bounds.height )
+      }
+
+      new Rectangle( minX, minY, maxX - minX, maxY - minY )
+   }
+
 	private def recalcBounds() {
-//println( "---1" )
 		if( collImg.isEmpty ) {
 			setVirtualBounds( 0, 0, 400, 400 )
 			return
 		}
-		
-		var minX = Int.MaxValue
-		var minY = Int.MaxValue
-		var maxX = Int.MinValue
-		var maxY = Int.MinValue
-		
-		collImg.foreach( img => {
-			minX = math.min( minX, img.bounds.x )
-			minY = math.min( minY, img.bounds.y )
-			maxX = math.max( maxX, img.bounds.x + img.bounds.width )
-			maxY = math.max( maxY, img.bounds.y + img.bounds.height )
-		})
+
+      val r = calcMinimumRectangle
 		
 //println( "---2 " + minX + ", " + minY + ", " + maxX + ", " + maxY )
-		setVirtualBounds( minX - 200, minY - 200, maxX - minX + 400, maxY - minY + 400 )
+		setVirtualBounds( r.x - 200, r.y - 200, r.width + 400, r.height + 400 )
 	}
 	
 	override def paintComponent( g: Graphics ) {
@@ -375,12 +416,22 @@ with Zoomable {
       paintGraphics( g2, extras = true )
 	}
 
+   private var qualityVar = false
+
+   def quality : Boolean = qualityVar
+   def quality_=( b: Boolean ) {
+      if( qualityVar != b ) {
+         qualityVar = b
+         repaint()
+      }
+   }
+
     private def paintGraphics( g2: Graphics2D, extras: Boolean ) {
 		val atOrig	= g2.getTransform
 
 //println( virtualRect )
-		g2.setRenderingHint( RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED )
-		g2.setRenderingHint( RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF )
+		g2.setRenderingHint( RenderingHints.KEY_RENDERING, if( quality ) RenderingHints.VALUE_RENDER_QUALITY else RenderingHints.VALUE_RENDER_SPEED )
+		g2.setRenderingHint( RenderingHints.KEY_ANTIALIASING, if( quality ) RenderingHints.VALUE_ANTIALIAS_ON else RenderingHints.VALUE_ANTIALIAS_OFF )
 		
 		g2.scale( zoom, zoom )
 		g2.translate( -clipLeftPx, -clipTopPx )
@@ -413,10 +464,14 @@ with Zoomable {
 		
 			g2.setRenderingHint( RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF )
 			g2.setColor( Color.red )
-			drag.foreach( d => g2.draw( d.img.bounds ))
+			drag.foreach { d =>
+            g2.draw( d.img.bounds )
+         }
 		}
 		g2.setTransform( atOrig )
 	}
+
+   def imageFiles: IIdxSeq[ File ] = collImg.map( i => new File( i.fileName ))( collection.breakOut )
 }
 
 case class Stitch( img1: StitchImage, img2: StitchImage )

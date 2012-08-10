@@ -49,3 +49,12 @@ pomExtra :=
    </developer>
 </developers>
 
+// ---- packaging ----
+
+seq( appbundle.settings: _* )
+
+appbundle.icon := Some( file( "application.png" ))
+
+appbundle.target <<= baseDirectory
+
+

@@ -36,7 +36,7 @@ class ScreenStitch {
 	private val poly	= new PolylineZoomView()
 	private var docFile: Option[ File ] = None
 	private var miEditPoly: JCheckBoxMenuItem = _
-	
+
 	// constructor
 	{
  //       UIManager.setLookAndFeel( "javax.swing.plaf.metal.MetalLookAndFeel" )
@@ -156,6 +156,12 @@ class ScreenStitch {
 				exportToPDF()
 			}
 		}))
+      m.add( new JMenuItem( new AbstractAction( "Export to PNG Image..." ) {
+         putValue( Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke( KeyEvent.VK_P, meta ))
+         def actionPerformed( e: ActionEvent ) {
+            exportToPNG()
+         }
+      }))
 
 		m  = new JMenu( "Tools" )
 		mb.add( m )
@@ -179,6 +185,13 @@ class ScreenStitch {
 			}
 		})
 		m.add( miEditPoly )
+      val miEditQuality = new JCheckBoxMenuItem( new AbstractAction( "High Quality" ) {
+         def actionPerformed( e: ActionEvent ) {
+            val but        = e.getSource.asInstanceOf[ AbstractButton ]
+            view.quality   = but.isSelected
+         }
+      })
+      m.add( miEditQuality )
 
 		frame.setJMenuBar( mb )
 		frame.pack()
@@ -356,7 +369,6 @@ class ScreenStitch {
 		}
 	}
 		
-	@throws( classOf[ IOException ])
 	private def save( file: File ) {
 		file.delete()
 		val oos = new DataOutputStream( new BufferedOutputStream( new FileOutputStream( file )))
@@ -375,7 +387,6 @@ class ScreenStitch {
 		view.makeTidy()
 	}
 
-	@throws( classOf[ IOException ])
 	def load( file: File ) {
 		val ois = new DataInputStream( new BufferedInputStream( new FileInputStream( file )))
 		if( ois.readInt != ScreenStitch.cookie ) throw new IOException( "Unrecognized format" )
@@ -413,8 +424,12 @@ class ScreenStitch {
 		}
 	}
 		
-	private def querySaveFile( title: String, ext: String ) : Option[ File ] = {
+	private def querySaveFile( title: String, ext: String, default: Option[ File ] = None ) : Option[ File ] = {
 		val dlg = new FileDialog( frame, title, FileDialog.SAVE )
+      default.foreach { f =>
+         dlg.setDirectory( f.getParent )
+         dlg.setFile( f.getName )
+      }
 		dlg.setVisible( true )
 		val dir      = dlg.getDirectory
 		val fileName = dlg.getFile
@@ -435,7 +450,33 @@ class ScreenStitch {
 		save( querySaveFile( "Save", "stitch" ))
 	}
 	
-	def exportToPDF() {
-	    querySaveFile( "Export to PDF", "pdf" ).foreach( view.createPDF( _ ))
+   def exportToPDF() {
+  	   querySaveFile( "Export to PDF", "pdf" ).foreach( view.createPDF )
+  	}
+
+   private def unionFile( n1: String, n2: String ) : String = {
+      if( n1 == n2 ) return n1
+      val beg  = n1 zip n2
+      val end  = beg.reverse
+      val i    = beg.prefixLength { case (a, b) => a == b }
+      val j    = end.prefixLength { case (a, b) => a == b }
+      n1.substring( 0, i ) + n1.substring( n1.length() - j )
+   }
+
+   private def stripExt( n: String ) : String = {
+      val i = n.lastIndexOf( '.' )
+      if( i < 0 ) n else n.substring( 0, i )
+   }
+
+	def exportToPNG() {
+      val fs = view.imageFiles
+      if( fs.isEmpty ) return
+
+      val f1      = fs.head
+      val dir     = f1.getParentFile
+      val name    = fs.tail.foldLeft( stripExt( f1.getName )) { case (n, f2) => unionFile( n, stripExt( f2.getName ))}
+      val default = new File( dir, name + ".png" )
+
+	   querySaveFile( "Export to PNG", "png", default = Some( default )).foreach( view.createPNG )
 	}
 }

@@ -10,7 +10,11 @@ ScreenStitch currently compiles against Scala 2.9.2 using sbt 0.12. To run use `
 
 ### getting started
 
-To add images, drag-and-drop them from the Finder. The left and top slider scroll throw the canvas. The bottom slider allows to zoom in and out. If two images overlap, they can be stitched together by double-clicking on any part of their overlapping. An algorithm will use cross correlation to find the exact relative positions in which the images fit together. The idea is that you can make multiple screenshots of a larger view (e.g. a map, a book page) and fit them perfectly together afterwards. It implies that the overlapping shots indeed share the same pixel information. The process may take very long when no match is found. In that case, the process can be aborted by pressing the escape key.
+To add images, drag-and-drop them from the Finder. The left and top slider scroll throw the canvas. The bottom slider allows to zoom in and out.
+
+If two images overlap, they can be stitched together by double-clicking on any part of their overlapping. An algorithm will use cross correlation to find the exact relative positions in which the images fit together. The idea is that you can make multiple screenshots of a larger view (e.g. a map, a book page) and fit them perfectly together afterwards. It implies that the overlapping shots indeed share the same pixel information. The process may take very long when no match is found. In that case, the process can be aborted by pressing the escape key.
+
+To delete an image, alt+click on it.
 
 ### creating an IntelliJ IDEA project
 
