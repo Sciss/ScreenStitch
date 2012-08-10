@@ -2,7 +2,7 @@
 
 ### statement
 
-ScreenStitch is a desktop application written the Scala programming language which allows to quickly assemble multiple bitmap images and export the result as PDF. It is (C)opyright 2004-2012 by Hanns Holger Rutz. All rights reserved. ScreenStitch is released under the [GNU Lesser General Public License](https://raw.github.com/Sciss/ScreenStitch/master/licenses/ScreenStitch-License.txt) and comes with absolutely no warranties. To contact the author, send an email to `contact at sciss.de`
+ScreenStitch is a desktop application written in the Scala programming language which allows to quickly assemble multiple bitmap images and export the result as PDF or PNG. It is (C)opyright 2004-2012 by Hanns Holger Rutz. All rights reserved. ScreenStitch is released under the [GNU Lesser General Public License](https://raw.github.com/Sciss/ScreenStitch/master/licenses/ScreenStitch-License.txt) and comes with absolutely no warranties. To contact the author, send an email to `contact at sciss.de`
 
 ### requirements / installation
 
