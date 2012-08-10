@@ -8,10 +8,9 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.datatransfer.{ DataFlavor, Transferable }
-import _root_.java.awt.image.{ BufferedImage }
-import _root_.java.io.{ File }
-import _root_.javax.swing.{ JComponent, TransferHandler }
+import java.awt.datatransfer.{ DataFlavor, Transferable }
+import java.io.File
+import javax.swing.{ JComponent, TransferHandler }
 
 class FileDropHandler( acceptAction: (File) => Unit )
 extends TransferHandler {

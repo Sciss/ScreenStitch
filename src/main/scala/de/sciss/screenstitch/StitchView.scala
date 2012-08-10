@@ -8,21 +8,20 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ BasicStroke, Color, Cursor, Dimension, EventQueue, Graphics,
-						 Graphics2D, Paint, Point, Rectangle, RenderingHints, Shape,
-						 TexturePaint, Toolkit }
-import _root_.java.awt.event.{ MouseEvent, KeyAdapter, KeyEvent }
-import _root_.java.awt.geom.{ GeneralPath }
-import _root_.java.awt.image.{ BufferedImage }
-import _root_.java.io.{ File, FileOutputStream, IOException, DataInputStream,
-	DataOutputStream, RandomAccessFile }
-import _root_.java.util.{ Timer, TimerTask }
-import _root_.javax.imageio.{ ImageIO }
-import _root_.javax.swing.{ JComponent, JPanel, JRootPane, JViewport, SwingUtilities }
-import _root_.javax.swing.event.{ MouseInputAdapter }
+import java.awt.{ BasicStroke, Color, Cursor, Dimension, EventQueue, Graphics,
+						 Graphics2D, Point, Rectangle, RenderingHints }
+import java.awt.event.{ MouseEvent, KeyAdapter, KeyEvent }
+import java.awt.geom.GeneralPath
+import java.awt.image.BufferedImage
+import java.io.{ File, FileOutputStream, IOException, DataInputStream, DataOutputStream }
+import java.util.{ Timer, TimerTask }
+import javax.imageio.ImageIO
+import javax.swing.{ JComponent, JViewport}
+import javax.swing.event.MouseInputAdapter
 
-import _root_.scala.collection.immutable.{ SortedSet, TreeSet }
-import _root_.scala.collection.mutable.{ ListBuffer }
+import collection.immutable.{IndexedSeq => IIdxSeq}
+import collection.mutable.ListBuffer
+import com.itextpdf.text
 
 class StitchView
 extends JComponent // JPanel // JComponent
@@ -35,7 +34,7 @@ with Zoomable {
 	private val jitter = 32
 	private val shpStitch = new GeneralPath()
 	private val strkStitch = new BasicStroke( 6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER )
-	private var jitPt: scala.collection.mutable.Sequence[ Point ] = _	
+	private var jitPt: IIdxSeq[ Point ] = _	
 	
 	private var viewPort: Option[ JViewport ] = None
 
@@ -55,7 +54,7 @@ with Zoomable {
 	
 	// ---- constructor ----
 	{
-		recalcBounds
+		recalcBounds()
 //		setPreferredSize( new Dimension( 800, 800 ))
 
 		shpStitch.moveTo( -30, 30 )
@@ -70,14 +69,14 @@ with Zoomable {
 				unsorted += new Point( x, y )
 			}
 		}
-		jitPt = unsorted.sortWith( (pt1, pt2) => pt1.x*pt1.x + pt1.y*pt1.y < pt2.x*pt2.x + pt2.y*pt2.y )  
+		jitPt = unsorted.sortWith( (pt1, pt2) => pt1.x*pt1.x + pt1.y*pt1.y < pt2.x*pt2.x + pt2.y*pt2.y ).toIndexedSeq
 		
 		setTransferHandler( new FileDropHandler( importImage( _ )))
 		
 		val mia = new MouseInputAdapter {
 			
 			override def mousePressed( e: MouseEvent ) {
-				requestFocus
+				requestFocus()
 				
 				if( alignThread.isDefined ) return
 
@@ -100,7 +99,7 @@ with Zoomable {
 			override def mouseReleased( e: MouseEvent ) {
 				drag.foreach( d => {
 					if( d.started ) {
-						recalcBounds
+						recalcBounds()
 						repaint()
 					}
 					drag = None
@@ -115,7 +114,7 @@ with Zoomable {
 						collImg -= d.img
 						collImg.prepend( d.img )  // so gets painted on top
 					}
-					makeDirty
+					makeDirty()
 					d.img.bounds.setLocation(
 					    d.origPos.x + ((e.getX - d.e.getX) / zoom).toInt,
 					    d.origPos.y + ((e.getY - d.e.getY) / zoom).toInt )
@@ -141,9 +140,9 @@ with Zoomable {
 	
 	def isDirty = dirty
 	
-	private def makeDirty : Unit = changeModified( true )
+	private def makeDirty() { changeModified( b = true )}
 	
-	def makeTidy  : Unit = changeModified( false )
+	def makeTidy() { changeModified( b = false )}
 	
 	private def changeModified( b: Boolean ) {
 		if( dirty != b ) {
@@ -169,13 +168,13 @@ with Zoomable {
 	
 	@throws( classOf[ IOException ])
 	def read( ois: DataInputStream ) {
-		clear
+		clear()
 		val numImages = ois.readInt
 		for( i <- (0 until numImages) ) {
 			val fileName = ois.readUTF
 			val x = ois.readInt
 			val y = ois.readInt
-			val bimg = ImageIO.read( new File( fileName ).toURL )
+			val bimg = ImageIO.read( new File( fileName ))
 			val img = new StitchImage( fileName, bimg )
 			img.bounds.setLocation( x, y )
 			collImg += img
@@ -187,17 +186,17 @@ with Zoomable {
 			val stitch = Stitch( collImg( idx1 ), collImg( idx2 ))
 			stitches += stitch
 		}
-		recalcBounds
+		recalcBounds()
 		repaint()
 	}
 	
-	def clear {
-		collImg.clear
-		stitches.clear
+	def clear() {
+		collImg.clear()
+		stitches.clear()
 		beep = 0L
 		drag = None
-		makeTidy
-		recalcBounds
+		makeTidy()
+		recalcBounds()
 		repaint()
 	}
 	
@@ -208,18 +207,18 @@ with Zoomable {
 	@throws( classOf[ IOException ])
 	def createPDF( file: File ) {
 		val d		= getPreferredSize 
-		val pageSize= new com.lowagie.text.Rectangle( 0, 0, d.width, d.height )
-		val doc		= new com.lowagie.text.Document( pageSize, 80, 60, 60, 60 ) // margins don't matter
+		val pageSize= new text.Rectangle( 0, 0, d.width, d.height )
+		val doc		= new text.Document( pageSize, 80, 60, 60, 60 ) // margins don't matter
 		val stream	= new FileOutputStream( file )
-		val writer	= com.lowagie.text.pdf.PdfWriter.getInstance( doc, stream )
-		doc.open
-		val cb = writer.getDirectContent()
+		val writer	= text.pdf.PdfWriter.getInstance( doc, stream )
+		doc.open()
+		val cb = writer.getDirectContent
 		val tp = cb.createTemplate( d.width, d.height )
 		val g2 = tp.createGraphics( d.width, d.height )
-		paintGraphics( g2, false )
-		g2.dispose;
+		paintGraphics( g2, extras = false )
+		g2.dispose()
 		cb.addTemplate( tp, 0, 0 )
-		doc.close
+		doc.close()
 	}
 	
 	def autoAlign( img1: StitchImage, img2: StitchImage ) {
@@ -227,26 +226,26 @@ with Zoomable {
 		if( img1.stitches.exists( s => s.img1 == img2 || s.img2 == img2 )) return
 		
 		alignThread = Some( new Thread( new Runnable {
-			def run {
+			def run() {
 				val oBestMove = calcBestMove( img1, img2 )
 				EventQueue.invokeLater( new Runnable {
-					def run {
+					def run() {
 						beep = System.currentTimeMillis + 250
 						if( oBestMove.isDefined ) {
-							makeDirty
+							makeDirty()
 							beepColor = Color.green
 							img2.bounds.translate( oBestMove.get.x, oBestMove.get.y )
 							val stitch = Stitch( img1, img2 )
 							img1.stitches += stitch
 							img2.stitches += stitch
 							stitches += stitch
-							recalcBounds
+							recalcBounds()
 						} else {
 							beepColor = Color.red
 						}
 						repaint()
 						new Timer().schedule( new TimerTask {
-							def run { repaint() }
+							def run() { repaint() }
 						}, 300 )
 						setCursor( null )
 						alignThread = None
@@ -256,7 +255,7 @@ with Zoomable {
 		}))
 		setCursor( Cursor.getPredefinedCursor( Cursor.WAIT_CURSOR ))
 		alignKeepRunning = true
-		alignThread.get.start
+		alignThread.get.start()
 	}
 	
 	private def calcBestMove( img1: StitchImage, img2: StitchImage ) : Option[ Point ] = {
@@ -316,25 +315,25 @@ with Zoomable {
 	}
 
 	def removeImage( img: StitchImage ) {
-		makeDirty
+		makeDirty()
 		collImg -= img
 		stitches --= img.stitches
-		recalcBounds
+		recalcBounds()
 		repaint()
 	}
 	
-	def importImage( f: File) : Unit = {
+	def importImage( f: File) {
 		try {
-			val bimg = ImageIO.read( f.toURL )
+			val bimg = ImageIO.read( f )
 			val stitch = new StitchImage( f.getAbsolutePath, bimg )
 			if( viewPort.isDefined ) {
 				val pt = viewPort.get.getViewPosition
 				stitch.bounds.x = ((pt.x / zoom) + virtualRect.x).toInt
 				stitch.bounds.y = ((pt.y / zoom) + virtualRect.y).toInt
 			}
-			makeDirty
+			makeDirty()
 			collImg.prepend( stitch )
-			recalcBounds
+			recalcBounds()
 			repaint() // stitch.x, stitch.y, stitch.bimg.getWidth, stitch.bimg.getHeight
 		}
 		catch {
@@ -348,7 +347,7 @@ with Zoomable {
 		revalidate()
 	}
 
-	private def recalcBounds {
+	private def recalcBounds() {
 //println( "---1" )
 		if( collImg.isEmpty ) {
 			setVirtualBounds( 0, 0, 400, 400 )
@@ -361,10 +360,10 @@ with Zoomable {
 		var maxY = Int.MinValue
 		
 		collImg.foreach( img => {
-			minX = Math.min( minX, img.bounds.x )
-			minY = Math.min( minY, img.bounds.y )
-			maxX = Math.max( maxX, img.bounds.x + img.bounds.width )
-			maxY = Math.max( maxY, img.bounds.y + img.bounds.height )
+			minX = math.min( minX, img.bounds.x )
+			minY = math.min( minY, img.bounds.y )
+			maxX = math.max( maxX, img.bounds.x + img.bounds.width )
+			maxY = math.max( maxY, img.bounds.y + img.bounds.height )
 		})
 		
 //println( "---2 " + minX + ", " + minY + ", " + maxX + ", " + maxY )
@@ -372,8 +371,8 @@ with Zoomable {
 	}
 	
 	override def paintComponent( g: Graphics ) {
-		val g2		= g.asInstanceOf[ Graphics2D ]
-        paintGraphics( g2, true )
+		val g2 = g.asInstanceOf[ Graphics2D ]
+      paintGraphics( g2, extras = true )
 	}
 
     private def paintGraphics( g2: Graphics2D, extras: Boolean ) {

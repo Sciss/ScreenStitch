@@ -8,17 +8,11 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ BorderLayout, Color, Dimension, EventQueue, FileDialog, Font,
-	Graphics2D, Toolkit }
-import _root_.java.awt.event.{ ActionEvent, InputEvent, KeyEvent, MouseAdapter,
-	MouseEvent, WindowAdapter, WindowEvent }
-import _root_.java.io.{ BufferedInputStream, BufferedOutputStream, File,
-	FileInputStream, FileOutputStream, IOException, DataInputStream, DataOutputStream }
-import _root_.javax.swing.{ AbstractAction, AbstractButton, Action, JCheckBoxMenuItem,
-	JComponent, JFrame, JMenu, JMenuBar, JMenuItem, JOptionPane, JPanel, JScrollPane,
-	JSeparator, JSlider, JViewport, KeyStroke, OverlayLayout, UIManager, SwingConstants,
-	WindowConstants }
-import _root_.javax.swing.event.{ ChangeEvent, ChangeListener }
+import java.awt.{ BorderLayout, Color, Dimension, EventQueue, FileDialog, Font, Graphics2D, Toolkit }
+import java.awt.event.{ ActionEvent, InputEvent, KeyEvent, MouseAdapter, MouseEvent, WindowAdapter, WindowEvent }
+import java.io.{ BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, IOException, DataInputStream, DataOutputStream }
+import javax.swing.{ AbstractAction, AbstractButton, Action, JCheckBoxMenuItem, JFrame, JMenu, JMenuBar, JMenuItem, JOptionPane, JPanel, JScrollPane, JSeparator, JSlider, KeyStroke, OverlayLayout, SwingConstants, WindowConstants }
+import javax.swing.event.{ ChangeEvent, ChangeListener }
 
 object ScreenStitch {
 //	val cookie = 0x5354495400000000L
@@ -27,11 +21,11 @@ object ScreenStitch {
 	
 	def main( args: Array[ String ]) {
 		System.setProperty( "apple.laf.useScreenMenuBar", "true" )
-		EventQueue.invokeLater( new Runnable { def run { new ScreenStitch }})
+		EventQueue.invokeLater( new Runnable { def run() { new ScreenStitch }})
 	}
 
 	def linexp( x: Double, inLo: Double, inHi: Double, outLo: Double, outHi: Double ) : Double = {
-		Math.pow( outHi / outLo, (x - inLo) / (inHi - inLo) ) * outLo
+		math.pow( outHi / outLo, (x - inLo) / (inHi - inLo) ) * outLo
 	}
 }
 
@@ -61,10 +55,10 @@ class ScreenStitch {
 			override def mousePressed( e: MouseEvent ) {
 				if( e.isAltDown ) {
 //					EventQueue.invokeLater( new Runnable { def run {
-						poly.deleteSelected
+						poly.deleteSelected()
 //					}})
 				} else if( e.getClickCount == 2 ) {
-					poly.insertFromScreen( e.getPoint, true )
+					poly.insertFromScreen( e.getPoint, mode = true )
 				}
 			}
 		})
@@ -114,7 +108,7 @@ class ScreenStitch {
 		val ggClipLeft = new JSlider( SwingConstants.HORIZONTAL, 0, 0x10000, 0 )
 		ggClipLeft.addChangeListener( new ChangeListener {
 			def stateChanged( e: ChangeEvent ) {
-				view.clipLeft( ggClipLeft.getValue.toFloat / 0x10000 );
+				view.clipLeft( ggClipLeft.getValue.toFloat / 0x10000 )
 			}
 		})
 		cp.add( ggClipLeft, BorderLayout.NORTH )
@@ -122,25 +116,25 @@ class ScreenStitch {
 		val ggClipTop = new JSlider( SwingConstants.VERTICAL, 0, 0x10000, 0 )
 		ggClipTop.addChangeListener( new ChangeListener {
 			def stateChanged( e: ChangeEvent ) {
-				view.clipTop( ggClipTop.getValue.toFloat / 0x10000 );
+				view.clipTop( ggClipTop.getValue.toFloat / 0x10000 )
 			}
 		})
 		cp.add( ggClipTop, BorderLayout.WEST )
 
-		val meta = Toolkit.getDefaultToolkit.getMenuShortcutKeyMask()
+		val meta = Toolkit.getDefaultToolkit.getMenuShortcutKeyMask
 		val mb = new JMenuBar
 		var m  = new JMenu( "File" )
 		mb.add( m )
 		m.add( new JMenuItem( new AbstractAction( "New" ) {
 			putValue( Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke( KeyEvent.VK_N, meta ))
 			def actionPerformed( e: ActionEvent ) {
-				clearDoc
+				clearDoc()
 			}
 		}))
 		m.add( new JMenuItem( new AbstractAction( "Open..." ) {
 			putValue( Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke( KeyEvent.VK_O, meta ))
 			def actionPerformed( e: ActionEvent ) {
-				openDoc
+				openDoc()
 			}
 		}))
 		m.add( new JSeparator )
@@ -159,7 +153,7 @@ class ScreenStitch {
 		m.add( new JSeparator )
 		m.add( new JMenuItem( new AbstractAction( "Export to PDF..." ) {
 			def actionPerformed( e: ActionEvent ) {
-				exportToPDF
+				exportToPDF()
 			}
 		}))
 
@@ -167,12 +161,12 @@ class ScreenStitch {
 		mb.add( m )
 		m.add( new JMenuItem( new AbstractAction( "Create Polyline" ) {
 			def actionPerformed( e: ActionEvent ) {
-				createPolyLine
+				createPolyLine()
 			}
 		}))
 		m.add( new JMenuItem( new AbstractAction( "Add Kilometer Labels" ) {
 			def actionPerformed( e: ActionEvent ) {
-				addKilometerLabels
+				addKilometerLabels()
 			}
 		}))
 
@@ -187,7 +181,7 @@ class ScreenStitch {
 		m.add( miEditPoly )
 
 		frame.setJMenuBar( mb )
-		frame.pack
+		frame.pack()
 		frame.setLocationRelativeTo( null )
 		frame.setDefaultCloseOperation( WindowConstants.DO_NOTHING_ON_CLOSE )
 		frame.addWindowListener( new WindowAdapter {
@@ -197,9 +191,9 @@ class ScreenStitch {
 				}
 			}
 		})
-		updateTitle
+		updateTitle()
 		frame.setVisible( true )
-		frame.toFront
+		frame.toFront()
 	}
 	
 	private def togglePolyVisibility( onOff: Boolean ) {
@@ -207,16 +201,16 @@ class ScreenStitch {
 		miEditPoly.setSelected( onOff )
 	}
 
-	private def createPolyLine {
+	private def createPolyLine() {
 		if( poly.getNumNodes > 0 ) return
 		
 		poly.setValues( List( 0.0f, 0.25f, 0.5f, 0.75f, 1.0f ).toArray,
 		                List( 0.0f, 1.0f, 0.25f, 0.0f, 0.5f ).toArray )
 
-		togglePolyVisibility( true )
+		togglePolyVisibility( onOff = true )
 	}
 	
-	private def addKilometerLabels {
+	private def addKilometerLabels() {
 		val numNodes = poly.getNumNodes
 		if( numNodes < 2 ) return
 		val totalKMo = queryNumber( "Add Kilometer Labels", "Enter the total polyline\nlength in km:", 100 )
@@ -234,7 +228,7 @@ class ScreenStitch {
 			val n2 = poly.getNode( i )
 			val dx = n2.x - n1.x
 			val dy = n2.y - n1.y
-			val hyp = Math.sqrt( dx*dx + dy*dy )
+			val hyp = math.sqrt( dx*dx + dy*dy )
 			lineSum += hyp
 			n1 = n2
 		}
@@ -242,7 +236,7 @@ class ScreenStitch {
 		
 		val fnt = poly.getFont
 		val g2 = poly.getGraphics.asInstanceOf[ Graphics2D ]
-		val frc = g2.getFontRenderContext()
+		val frc = g2.getFontRenderContext
 		
 		lineSum = 0.0
 		var labelCnt = 1
@@ -251,11 +245,11 @@ class ScreenStitch {
 			val n2 = poly.getNode( i )
 			val dx = n2.x - n1.x
 			val dy = n2.y - n1.y
-			val hyp = Math.sqrt( dx*dx + dy*dy )
+			val hyp = math.sqrt( dx*dx + dy*dy )
 			lineSum += hyp
 			val lineSumSc = lineSum * scale
 			if( lineSumSc >= (spaceKM * labelCnt) ) {
-				val txt = Math.round( lineSumSc ).toString
+				val txt = math.round( lineSumSc ).toString
 				val r = fnt.getStringBounds( txt, frc )
 				poly.setThumbWidth( i, r.getWidth.toFloat + 16 )
 				poly.setThumbHeight( i, r.getHeight.toFloat + 8 )
@@ -267,7 +261,7 @@ class ScreenStitch {
 			n1 = n2
 		}
 		
-		g2.dispose
+		g2.dispose()
 	}
 	
 	private def setDirty( b: Boolean ) {
@@ -303,24 +297,24 @@ class ScreenStitch {
 		res == JOptionPane.YES_OPTION
 	}
 
-	def clearDoc {
+	def clearDoc() {
 		if( view.isDirty && !confirmLoss( "New" )) return
-		view.clear
+		view.clear()
 		docFile = None
-		updateTitle
+		updateTitle()
 	}
 	
-	def openDoc {
+	def openDoc() {
 		if( view.isDirty && !confirmLoss( "Open" )) return
 		val df = queryLoadFile( "Open" )
 		if( df.isDefined ) {
 			try {
 				load( df.get )
 				docFile = df
-				updateTitle
+				updateTitle()
 			}
 			catch {
-				case e => displayError( "Open", e )
+				case e: Throwable => displayError( "Open", e )
 			}
 		}
 	}
@@ -329,9 +323,9 @@ class ScreenStitch {
 		var msg = "<HTML><BODY><P><B>" + e.getClass.getName + "<BR>" +
 			(if( e.getMessage == null ) "" else e.getMessage) + "</B></P><UL>"		
 			
-        val trace = e.getStackTrace()
+        val trace = e.getStackTrace
 		val numTraceLines = 4
-        for( i <- (0 until Math.min( numTraceLines, trace.length ))) {
+        for( i <- (0 until math.min( numTraceLines, trace.length ))) {
         	msg = msg + "<LI>at " + trace( i ) + "</LI>"
         }
         if( trace.length > 3 ) {
@@ -354,11 +348,11 @@ class ScreenStitch {
 		try {
 			save( df.get )
 			docFile = df
-			updateTitle
+			updateTitle()
 			true
 		}
 		catch {
-			case e => { displayError( "Save", e ); false }
+			case e: Throwable => { displayError( "Save", e ); false }
 		}
 	}
 		
@@ -377,8 +371,8 @@ class ScreenStitch {
 			oos.writeFloat( n.x )
 			oos.writeFloat( n.y )
 		}
-		oos.close
-		view.makeTidy
+		oos.close()
+		view.makeTidy()
 	}
 
 	@throws( classOf[ IOException ])
@@ -399,11 +393,11 @@ class ScreenStitch {
 			}
 			poly.setValues( nxs, nys )
 		}
-		ois.close
-		view.makeTidy
+		ois.close()
+		view.makeTidy()
 	}
 
-	private def updateTitle {
+	private def updateTitle() {
 		frame.setTitle( "Screen Stitch : " + (if( docFile.isDefined ) docFile.get.getName else "Untitled") )
 	}
 	
@@ -441,7 +435,7 @@ class ScreenStitch {
 		save( querySaveFile( "Save", "stitch" ))
 	}
 	
-	def exportToPDF {
+	def exportToPDF() {
 	    querySaveFile( "Export to PDF", "pdf" ).foreach( view.createPDF( _ ))
 	}
 }

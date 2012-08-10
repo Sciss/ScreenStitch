@@ -1,8 +1,8 @@
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ Color, Dimension, Graphics, Graphics2D, Paint, Rectangle, TexturePaint }
-import _root_.java.awt.image.{ BufferedImage }
-import _root_.javax.swing.{ JComponent, JPanel }
+import java.awt.{ Dimension, Graphics, Graphics2D, Paint, Rectangle, TexturePaint }
+import java.awt.image.BufferedImage
+import javax.swing.JComponent
 
 class CheckerBackground( sizeH: Int )
 extends JComponent

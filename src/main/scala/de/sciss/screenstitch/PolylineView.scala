@@ -8,12 +8,12 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ AWTEventMulticaster, BasicStroke, Color, Graphics,
+import java.awt.{ AWTEventMulticaster, BasicStroke, Color, Graphics,
 	Graphics2D, Point, Rectangle, RenderingHints, Stroke }
-import _root_.java.awt.event.{ ActionEvent, ActionListener, MouseEvent }
-import _root_.java.awt.geom.{ GeneralPath, Point2D, Rectangle2D, RoundRectangle2D }
-import _root_.javax.swing.{ JComponent, JPanel }
-import _root_.javax.swing.event.{ MouseInputAdapter }
+import java.awt.event.{ ActionEvent, ActionListener, MouseEvent }
+import java.awt.geom.{ GeneralPath, Point2D, Rectangle2D, RoundRectangle2D }
+import javax.swing.JComponent
+import javax.swing.event.MouseInputAdapter
 
 object PolylineView {
 	/**
@@ -61,8 +61,8 @@ extends JComponent
 	private val colrRubber		= new Color( 0x40, 0x40, 0x40 )
 	
 	// helper constants for shape calculation
-	private val EXPM1			= Math.exp(-1).toFloat
-	private val EXPM1R			= (1.0 - Math.exp(-1)).toFloat
+	private val EXPM1			= math.exp(-1).toFloat
+	private val EXPM1R			= (1.0 - math.exp(-1)).toFloat
 
 	private var dirtyNodes		= new Array[ Node ]( 0 )
 	private var numDirty		= 0
@@ -105,7 +105,6 @@ extends JComponent
 	 *	when the user adjusts the knob.
 	 *
 	 *	@param	l	the listener to register
-	 *	@synchronization	this method is thread safe
 	 */
 	def addActionListener( l: ActionListener ) {
 		al = AWTEventMulticaster.add( al, l )
@@ -116,7 +115,6 @@ extends JComponent
 	 *	the component.
 	 *
 	 *	@param	l	the listener to remove from being notified
-	 *	@synchronization	this method is thread safe
 	 */
 	def removeActionListener( l: ActionListener ) {
 		al = AWTEventMulticaster.remove( al, l )
@@ -127,21 +125,21 @@ extends JComponent
 		repaint()
 	}
 	
-	def getDrawLines() : Boolean = drawLines
+	def getDrawLines : Boolean = drawLines
 	
 	def setDrawRects( onOff: Boolean ) {
 		drawRects	= onOff
 		repaint()
 	}
 	
-	def getDrawRects() : Boolean = drawRects
+	def getDrawRects : Boolean = drawRects
 
 	override def paintComponent( g: Graphics ) {
 		val g2		= g.asInstanceOf[ Graphics2D ]
-		val ins		= getInsets()
-		val cw		= getWidth() - ins.left - ins.right
-		val ch		= getHeight() - ins.top - ins.bottom
-		val atOrig	= g2.getTransform()
+		val ins		= getInsets
+		val cw		= getWidth - ins.left - ins.right
+		val ch		= getHeight - ins.top - ins.bottom
+		val atOrig	= g2.getTransform
 
 		g2.translate( ins.left, ins.top )
 		paintKnob( g2, cw, ch )
@@ -156,12 +154,12 @@ extends JComponent
 	}
 
 	protected def paintKnob( g2: Graphics2D, cw1: Int, ch1: Int ) {
-		val clipOrig		= g2.getClip()
+		val clipOrig		= g2.getClip
 		val numValues		= nodes.length
 		val reallyDrawLines = drawLines && hasStroke && (numValues > 0)
 		val invalidAll		= (cw1 != recentWidth) || (ch1 != recentHeight)
 		val drawORects		= drawRects && hasStroke
-		val fm				= g2.getFontMetrics()
+		val fm				= g2.getFontMetrics
 		
 		if( invalidAll ) {
 			recentWidth		= cw1
@@ -203,7 +201,7 @@ extends JComponent
 				
 				if( n.label != null ) {
 					n.tx = n.cx - fm.stringWidth( n.label ) / 2
-					n.ty = n.cy + (fm.getAscent() - fm.getDescent()) / 2 - 1
+					n.ty = n.cy + (fm.getAscent - fm.getDescent) / 2 - 1
 				}
 				
 				n.invalid = false
@@ -220,23 +218,23 @@ extends JComponent
 					case Node.SHP_STEP => {
 						for( j <- (0 until n.connections.length) ) {
 							val n2 = n.connections( j )
-							gpLines.moveTo( n.cx, n.cy );
-							gpLines.lineTo( n.cx, n2.cy );
-							gpLines.lineTo( n2.cx, n2.cy );
+							gpLines.moveTo( n.cx, n.cy )
+							gpLines.lineTo( n.cx, n2.cy )
+							gpLines.lineTo( n2.cx, n2.cy )
 						}
 					}
 					case Node.SHP_LINEAR => {
 						for( j <- (0 until n.connections.length) ) {
 							val n2 = n.connections( j )
-							gpLines.moveTo( n.cx, n.cy );
-							gpLines.lineTo( n2.cx, n2.cy );
+							gpLines.moveTo( n.cx, n.cy )
+							gpLines.lineTo( n2.cx, n2.cy )
 						}
 					}
 					case Node.SHP_SINE => {
 						for( j <- (0 until n.connections.length) ) {
 							val n2 = n.connections( j )
-							gpLines.moveTo( n.cx, n.cy );
-							gpLines.curveTo( n.cx * EXPM1R + n2.cx * EXPM1, n.cy, n.cx * EXPM1 + n2.cx * EXPM1R, n2.cy, n2.cx, n2.cy );
+							gpLines.moveTo( n.cx, n.cy )
+							gpLines.curveTo( n.cx * EXPM1R + n2.cx * EXPM1, n.cy, n.cx * EXPM1 + n2.cx * EXPM1R, n2.cy, n2.cx, n2.cy )
 						}
 					}
 					case _ => {
@@ -257,7 +255,7 @@ extends JComponent
 								var ix = 0f // n.cx - n1s.cx;
 								gpLines.moveTo( n1s.cx, n1s.cy )
 								do {
-									ix = Math.min( dx, ix + 2 )
+									ix = math.min( dx, ix + 2 )
 									val rx = ix / dx
 									val ry = (1.0 - envAt( n1s, n2s, rx )).toFloat
 									gpLines.lineTo( ix + n1s.cx, (sy1 * ry + oy1) * (1 - rx) +
@@ -273,22 +271,22 @@ extends JComponent
 					val n2 = nodes( i )
 					n.shape match {
 					case Node.SHP_STEP => {
-						gpLines.moveTo( n.cx, n.cy );
-						gpLines.lineTo( n.cx, n2.cy );
-						gpLines.lineTo( n2.cx, n2.cy );
+						gpLines.moveTo( n.cx, n.cy )
+						gpLines.lineTo( n.cx, n2.cy )
+						gpLines.lineTo( n2.cx, n2.cy )
 					}
 					case Node.SHP_LINEAR => {
-						gpLines.moveTo( n.cx, n.cy );
-						gpLines.lineTo( n2.cx, n2.cy );
+						gpLines.moveTo( n.cx, n.cy )
+						gpLines.lineTo( n2.cx, n2.cy )
 					}
 					case Node.SHP_SINE => {
-						gpLines.moveTo( n.cx, n.cy );
-						gpLines.curveTo( n.cx * EXPM1R + n2.cx * EXPM1, n.cy, n.cx * EXPM1 + n2.cx * EXPM1R, n2.cy, n2.cx, n2.cy );
+						gpLines.moveTo( n.cx, n.cy )
+						gpLines.curveTo( n.cx * EXPM1R + n2.cx * EXPM1, n.cy, n.cx * EXPM1 + n2.cx * EXPM1R, n2.cy, n2.cx, n2.cy )
 					}
 					case _ => {
 						if( n.x == n2.x ) {
-							gpLines.moveTo( n.cx, n.cy );
-							gpLines.lineTo( n2.cx, n2.cy );
+							gpLines.moveTo( n.cx, n.cy )
+							gpLines.lineTo( n2.cx, n2.cy )
 						} else {
 							val n1s = if( n.x < n2.x ) n else n2
 							val n2s = if( n.x < n2.x ) n2 else n
@@ -300,7 +298,7 @@ extends JComponent
 							var ix = 0f // n.cx - n1s.cx;
 							gpLines.moveTo( n1s.cx, n1s.cy )
 							do {
-								ix = Math.min( dx, ix + 2 )
+								ix = math.min( dx, ix + 2 )
 								val rx = ix / dx
 								val ry = (1.0 - envAt( n1s, n2s, rx )).toFloat
 								gpLines.lineTo( ix + n1s.cx, (sy1 * ry + oy1) * (1 - rx) +
@@ -331,7 +329,7 @@ extends JComponent
 				}
 				if( n.label != null ) {
 					g2.setColor( strokeColor )
-					val subClip = g2.getClip()
+					val subClip = g2.getClip
 					g2.clip( n.r )
 					g2.drawString( n.label, n.tx, n.ty )
 					g2.setClip( subClip )
@@ -347,7 +345,7 @@ extends JComponent
 		}
 		
 		if( !rubberRect.isEmpty ) {
-			val strkOrig	= g2.getStroke()
+			val strkOrig	= g2.getStroke
 			g2.setColor( colrRubber )
 			g2.setStroke( strkRubber( strkRubberIdx & 0x07 ))
 			g2.draw( rubberRect )
@@ -374,14 +372,14 @@ extends JComponent
 	def getLastIndex : Int = lastIndex
 	
 	// quick hacks to add editing capacities....
-	def deleteSelected {
+	def deleteSelected() {
 		val keep = nodes.filter( !_.selected )
 		setValues( keep.map( _.x ).toArray, keep.map( _.y ).toArray,
 		           keep.map( _.shape ).toArray, keep.map( _.curve ).toArray )
 	}
 
 	/**
-	 * 	@mode	false for index based on x value,
+	 * 	@param mode	false for index based on x value,
 	 * 			true for index based on line projections
 	 */
 	def insertFromScreen( scrPt: Point, mode: Boolean ) {
@@ -392,9 +390,9 @@ extends JComponent
 		val idx = if( mode ) {
 			var lnP1		= nodes( 0 )
 			var bestIdx		= 1
-			var minDistSq	= Math.POS_INF_DOUBLE
+			var minDistSq	= Double.PositiveInfinity
 			for( i <- (1 until nodes.length) ) {
-				var lnP2		= nodes( i )
+				val lnP2		= nodes( i )
 				val dx      	= lnP2.x - lnP1.x
 				val dy      	= lnP2.y - lnP1.y
 				val lineLenSq	= (dx*dx) + (dy*dy)
@@ -557,13 +555,13 @@ extends JComponent
 	}
 
 	def setFillColor( index: Int, c: Color ) {
-		val c2 = if( c.getAlpha() == 0 ) null else c
+		val c2 = if( c.getAlpha == 0 ) null else c
 		if( index == -1 ) {
 			for( i <- (0 until nodes.length) ) {
-				nodes( i ).fillColor = c2;
+				nodes( i ).fillColor = c2
 			}
 		} else {
-			nodes( index ).fillColor = c2;
+			nodes( index ).fillColor = c2
 		}
 		protoNode.fillColor = c2
 		if( drawRects ) repaint()
@@ -632,18 +630,18 @@ extends JComponent
 		
 		if( oldNumVals != newNumVals ) {
 			var tmp		= new Array[ Node ]( newNumVals )
-			val minNum	= Math.min( oldNumVals, newNumVals )
+			val minNum	= math.min( oldNumVals, newNumVals )
 			System.arraycopy( nodes, 0, tmp, 0, minNum )
 			var i = minNum
 			while( i < newNumVals ) {
 				tmp( i ) = new Node( i, protoNode )
 				i += 1
 			}
-			nodes		= tmp;
+			nodes		= tmp
 			tmp			= new Array[ Node ]( newNumVals )
-			System.arraycopy( dirtyNodes, 0, tmp, 0, minNum );
-			dirtyNodes	= tmp;
-			numDirty	= Math.min( numDirty, newNumVals ); 
+			System.arraycopy( dirtyNodes, 0, tmp, 0, minNum )
+			dirtyNodes	= tmp
+			numDirty	= math.min( numDirty, newNumVals )
 		}
 		
 		for( i <- (0 until newNumVals) ) {
@@ -663,7 +661,7 @@ extends JComponent
 		
 		if( oldNumVals != newNumVals ) {
 			var tmp		= new Array[ Node ]( newNumVals )
-			val minNum	= Math.min( oldNumVals, newNumVals )
+			val minNum	= math.min( oldNumVals, newNumVals )
 			System.arraycopy( nodes, 0, tmp, 0, minNum )
 			var i = minNum
 			while( i < newNumVals ) {
@@ -674,7 +672,7 @@ extends JComponent
 			tmp			= new Array[ Node ]( newNumVals )
 			System.arraycopy( dirtyNodes, 0, tmp, 0, minNum )
 			dirtyNodes	= tmp
-			numDirty	= Math.min( numDirty, newNumVals ) 
+			numDirty	= math.min( numDirty, newNumVals ) 
 		}
 		
 		for( i <- (0 until newNumVals) ) {
@@ -706,7 +704,7 @@ extends JComponent
 	
 	def getDirtySize : Int = numDirty
 	
-	def clearDirty {
+	def clearDirty() {
 		for( i <- (0 until numDirty) ) {
 			dirtyNodes( i ).dirty = false
 		}
@@ -725,7 +723,7 @@ extends JComponent
 		if( stepSize <= 0f ) {
 			n
 		} else {
-			Math.round( n / stepSize ) * stepSize
+			math.round( n / stepSize ) * stepSize
 		}
 	}
 
@@ -753,38 +751,38 @@ extends JComponent
 		case Node.SHP_STEP => n2.y
 		case Node.SHP_LINEAR => pos * (n2.y - n1.y) + n1.y
 		case Node.SHP_EXPONENTIAL => {
-			val y1Lim = Math.max( 0.0001f, n1.y )
-			y1Lim * Math.pow( n2.y / y1Lim, pos )
+			val y1Lim = math.max( 0.0001f, n1.y )
+			y1Lim * math.pow( n2.y / y1Lim, pos )
 		}
 		case Node.SHP_SINE => {
-			n1.y + (n2.y - n1.y) * (-Math.cos( Math.Pi * pos ) * 0.5 + 0.5)
+			n1.y + (n2.y - n1.y) * (-math.cos( math.Pi * pos ) * 0.5 + 0.5)
 		}
 		case Node.SHP_WELCH => {
 			if( n1.y < n2.y ) {
-				n1.y + (n2.y - n1.y) * Math.sin( Math.Pi * 0.5 * pos )
+				n1.y + (n2.y - n1.y) * math.sin( math.Pi * 0.5 * pos )
 			} else { 
-				n2.y - (n2.y - n1.y) * Math.sin( Math.Pi * 0.5 * (1 - pos) )
+				n2.y - (n2.y - n1.y) * math.sin( math.Pi * 0.5 * (1 - pos) )
 			}
 		}
 		case Node.SHP_CURVE => {
-			if( Math.abs( n1.curve ) < 0.0001f ) {
+			if( math.abs( n1.curve ) < 0.0001f ) {
 				pos * (n2.y - n1.y) + n1.y
 			} else {
-				val denom	= 1.0 - Math.exp( n1.curve )
-				val numer	= 1.0 - Math.exp( pos * n1.curve )
+				val denom	= 1.0 - math.exp( n1.curve )
+				val numer	= 1.0 - math.exp( pos * n1.curve )
 				n1.y + (n2.y - n1.y) * (numer / denom)
 			}
 		}
 		case Node.SHP_SQUARED => {
-			val y1Pow2	= Math.sqrt( n1.y )
-			val y2Pow2	= Math.sqrt( n2.y )
+			val y1Pow2	= math.sqrt( n1.y )
+			val y2Pow2	= math.sqrt( n2.y )
 			val yPow2	= pos * (y2Pow2 - y1Pow2) + y1Pow2
 			yPow2 * yPow2
 		}
 		case Node.SHP_CUBED => {
-			val y1Pow3	= Math.pow( n1.y, 0.3333333 );
-			val y2Pow3	= Math.pow( n2.y, 0.3333333 );
-			val yPow3	= pos * (y2Pow3 - y1Pow3) + y1Pow3;
+			val y1Pow3	= math.pow( n1.y, 0.3333333 )
+			val y2Pow3	= math.pow( n2.y, 0.3333333 )
+			val yPow3	= pos * (y2Pow3 - y1Pow3) + y1Pow3
 			yPow3 * yPow3 * yPow3
 		}}
 	}
@@ -793,7 +791,7 @@ extends JComponent
 	protected def screenToVirtual( r: Rectangle2D ) : Rectangle2D = r
 	
 	protected def inset( pt: Point ) : Point = {
-		val ins	= getInsets()
+		val ins	= getInsets
 		new Point( pt.x - (ins.left + 1), pt.y - (ins.top + 1) )
 	}
 
@@ -815,7 +813,7 @@ extends JComponent
 				val n = nodes( i )
 				if( !n.invalid && vRect.intersects( n.r )) return n
 			}
-			return null
+			null
 		}
 		
 		override def mousePressed( e: MouseEvent ) {
@@ -935,20 +933,20 @@ if( !n.done ) {
 					val reallyNotLocked = !lockBounds || ((i > 0) && (i < nodes.length - 1))
 					if( clipThumbs ) {
 						if( reallyNotLocked ) {
-							x	= snap( Math.max( 0f, Math.min( 1f, n.oldX + dx )))
+							x	= snap( math.max( 0f, math.min( 1f, n.oldX + dx )))
 						} else {
 							x	= n.x
 						}
-						y		= snap( Math.max( 0f, Math.min( 1f, n.oldY + dy )))
+						y		= snap( math.max( 0f, math.min( 1f, n.oldY + dy )))
 					} else {
 						if( reallyNotLocked ) {
-							x	= snap( Math.max( 0f, Math.min( 1f, n.oldX +
-									dx / Math.max( 1, recentWidth - n.thumbWidth ))))
+							x	= snap( math.max( 0f, math.min( 1f, n.oldX +
+									dx / math.max( 1, recentWidth - n.thumbWidth ))))
 						} else {
 							x	= n.x
 						}
-						y		= snap( Math.max( 0f, Math.min( 1f, n.oldY +
-									dy / Math.max( 1, recentHeight - n.thumbHeight ))))
+						y		= snap( math.max( 0f, math.min( 1f, n.oldY +
+									dy / math.max( 1, recentHeight - n.thumbHeight ))))
 					}
 					var n2 = n
 					if( reallyNotLocked && (horizEditMode != PolylineView.kHEditFree) ) {
@@ -959,7 +957,7 @@ if( !n.done ) {
 								while( (j >= 0) && keep ) {
 									if( !nodes( j ).selected ) {
 										nPred	= nodes( j  )
-										x = Math.max( x, nPred.x )
+										x = math.max( x, nPred.x )
 										keep = false
 									}
 									j -= 1
@@ -970,7 +968,7 @@ if( !n.done ) {
 								while( (j < nodes.length) && keep ) {
 									if( !nodes( j ).selected ) {
 										nSucc	= nodes( j )
-										x		= Math.min( x, nSucc.x )
+										x		= math.min( x, nSucc.x )
 										keep = false
 									}
 									j += 1

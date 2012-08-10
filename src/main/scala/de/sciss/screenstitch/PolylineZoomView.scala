@@ -22,12 +22,12 @@ with Zoomable {
 
 	override def paintComponent( g: Graphics ) {
 		val g2		= g.asInstanceOf[ Graphics2D ]
-		val ins		= getInsets()
+//		val ins		= getInsets
 //		val cw		= getWidth() - ins.left - ins.right
 //		val ch		= getHeight() - ins.top - ins.bottom
 		val cw		= virtualRect.width
 		val ch		= virtualRect.height
-		val atOrig	= g2.getTransform()
+		val atOrig	= g2.getTransform
 
 //		g2.translate( ins.left, ins.top )
 		g2.scale( zoom, zoom )

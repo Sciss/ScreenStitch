@@ -8,13 +8,13 @@
  */
 package de.sciss.screenstitch
 
-import _root_.java.awt.{ Dimension, Point, Rectangle }
+import java.awt.{ Dimension, Point, Rectangle }
 
 trait Zoomable {
 	protected var	zoom		= 1.0f
-	private var		clipLeftAmt	= 0f;
+	private var		clipLeftAmt	= 0f
 	protected var	clipLeftPx	= 0
-	private var		clipTopAmt	= 0f;
+	private var		clipTopAmt	= 0f
 	protected var	clipTopPx	= 0
 	protected val	virtualRect = new Rectangle( 0, 0, 400, 400 )
 	private var		slaves: List[ Zoomable ] = Nil
@@ -22,7 +22,7 @@ trait Zoomable {
 	def setZoom( x: Float ) {
 		if( zoom != x ) {
 			zoom = x
-			updateScreenSize
+			updateScreenSize()
 		}
 		slaves.foreach( _.setZoom( x ))
 	}
@@ -33,7 +33,7 @@ trait Zoomable {
 			clipLeftAmt = amount
 			clipLeftPx  = (virtualRect.width * clipLeftAmt).toInt
 //println( "amt " + clipLeftAmt + "; px " + clipLeftPx )
-			updateScreenSize
+			updateScreenSize()
 		}
 		slaves.foreach( _.clipLeft( amount ))
 	}
@@ -42,7 +42,7 @@ trait Zoomable {
 		if( clipTopAmt != amount ) {
 			clipTopAmt = amount
 			clipTopPx  = (virtualRect.height * clipTopAmt).toInt
-			updateScreenSize
+			updateScreenSize()
 		}
 		slaves.foreach( _.clipTop( amount ))
 	}
@@ -55,7 +55,7 @@ trait Zoomable {
 		slaves = slaves.diff( List( z )) // ??? terrible
 	}
 	
-	private def updateScreenSize {		
+	private def updateScreenSize() {
 		val scrW = (virtualRect.width * zoom * (1.0f - clipLeftAmt)).toInt
 		val scrH = (virtualRect.height * zoom * (1.0f - clipTopAmt)).toInt
 		val d    = new Dimension( scrW, scrH )
@@ -70,7 +70,7 @@ trait Zoomable {
 	    virtualRect.setBounds( x, y, w, h )
 	    clipLeftPx = (virtualRect.width * clipLeftAmt).toInt
 	    clipTopPx  = (virtualRect.width * clipTopAmt).toInt
-	   	updateScreenSize
+	   	updateScreenSize()
 	   	
 		slaves.foreach( _.setVirtualBounds( x, y, w, h ))
 	}
