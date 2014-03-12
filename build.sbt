@@ -1,45 +1,44 @@
 name := "ScreenStitch"
 
-version := "0.11"
+version := "0.12.0-SNAPSHOT"
 
 organization := "de.sciss"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.10.3"
 
 description := "Arrange various screenshots (typically from maps) and glue the parts together"
 
-homepage := Some( url( "https://github.com/Sciss/ScreenStitch" ))
+homepage := Some(url("https://github.com/Sciss/" + name.value))
 
-licenses := Seq( "GPL v2+" -> url( "http://www.gnu.org/licenses/gpl-2.0.txt" ))
+licenses := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
 
 libraryDependencies ++= Seq(
-   "com.itextpdf" % "itextpdf" % "5.1.1"
+  "com.itextpdf" % "itextpdf" % "5.5.0"
 )
 
-retrieveManaged := true
+// retrieveManaged := true
 
-scalacOptions ++= Seq( "-deprecation", "-unchecked" )
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
 
 // ---- publishing ----
 
 publishMavenStyle := true
 
-publishTo <<= version { (v: String) =>
-   Some( if( v.endsWith( "-SNAPSHOT" ))
-      "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-   else
-      "Sonatype Releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-   )
-}
+publishTo :=
+  Some(if (version.value endsWith "-SNAPSHOT")
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+  else
+    "Sonatype Releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+  )
 
 publishArtifact in Test := false
 
 pomIncludeRepository := { _ => false }
 
-pomExtra :=
+pomExtra := { val n = name.value
 <scm>
-  <url>git@github.com:Sciss/ScreenStitch.git</url>
-  <connection>scm:git:git@github.com:Sciss/ScreenStitch.git</connection>
+  <url>git@github.com:Sciss/{n}.git</url>
+  <connection>scm:git:git@github.com:Sciss/{n}.git</connection>
 </scm>
 <developers>
    <developer>
@@ -48,13 +47,13 @@ pomExtra :=
       <url>http://www.sciss.de</url>
    </developer>
 </developers>
+}
 
 // ---- packaging ----
 
-seq( appbundle.settings: _* )
+seq(appbundle.settings: _*)
 
-appbundle.icon := Some( file( "application.png" ))
+appbundle.icon := Some(file("application.png"))
 
-appbundle.target <<= baseDirectory
-
+appbundle.target := baseDirectory.value
 

@@ -1,2 +1,2 @@
-addSbtPlugin( "de.sciss" % "sbt-appbundle" % "0.15" )
+addSbtPlugin("de.sciss" % "sbt-appbundle" % "1.0.1")
 
