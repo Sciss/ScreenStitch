@@ -1,31 +1,22 @@
-name := "ScreenStitch"
+name          := "ScreenStitch"
+version       := "0.12.0-SNAPSHOT"
+organization  := "de.sciss"
+scalaVersion  := "2.11.7"
+description   := "Arrange various screenshots (typically from maps) and glue the parts together"
+homepage      := Some(url(s"https://github.com/Sciss/${name.value}"))
+licenses      := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
 
-version := "0.12.0-SNAPSHOT"
+libraryDependencies +=
+  "com.itextpdf" % "itextpdf" % "5.5.8"
 
-organization := "de.sciss"
-
-scalaVersion := "2.10.3"
-
-description := "Arrange various screenshots (typically from maps) and glue the parts together"
-
-homepage := Some(url("https://github.com/Sciss/" + name.value))
-
-licenses := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
-
-libraryDependencies ++= Seq(
-  "com.itextpdf" % "itextpdf" % "5.5.0"
-)
-
-// retrieveManaged := true
-
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xfuture", "-Xlint")
 
 // ---- publishing ----
 
 publishMavenStyle := true
 
 publishTo :=
-  Some(if (version.value endsWith "-SNAPSHOT")
+  Some(if (isSnapshot.value)
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
   else
     "Sonatype Releases"  at "https://oss.sonatype.org/service/local/staging/deploy/maven2"
@@ -48,12 +39,3 @@ pomExtra := { val n = name.value
    </developer>
 </developers>
 }
-
-// ---- packaging ----
-
-seq(appbundle.settings: _*)
-
-appbundle.icon := Some(file("application.png"))
-
-appbundle.target := baseDirectory.value
-
