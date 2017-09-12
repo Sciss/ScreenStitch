@@ -1,13 +1,13 @@
 name          := "ScreenStitch"
 version       := "0.12.0-SNAPSHOT"
 organization  := "de.sciss"
-scalaVersion  := "2.11.8"
+scalaVersion  := "2.12.3"
 description   := "Arrange various screenshots (typically from maps) and glue the parts together"
 homepage      := Some(url(s"https://github.com/Sciss/${name.value}"))
 licenses      := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
 
 libraryDependencies +=
-  "com.itextpdf" % "itextpdf" % "5.5.9"
+  "com.itextpdf" % "itextpdf" % "5.5.12"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xfuture", "-Xlint")
 
