@@ -2,7 +2,7 @@
  * PolylineView.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2016 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -1041,33 +1041,33 @@ class PolylineView
   }
 
   protected class Node(val idx: Int) {
-    var x           = 0f
-    var y           = 0f
-    var shape       = Node.SHP_LINEAR
-    var curve       = 0f
-    var fillColor   = Color.black
-    var thumbWidth  = 5f
+    var x                         = 0f
+    var y                         = 0f
+    var shape       : Int         = Node.SHP_LINEAR
+    var curve                     = 0f
+    var fillColor   : Color       = Color.black
+    var thumbWidth                = 5f
     // 12f;
-    var thumbHeight = 5f // 12f;
+    var thumbHeight               = 5f // 12f;
 
-    var readOnly    = false
-    var selected    = false
-    var connections = Node.NO_CONNECTIONS
-    var label       = null: String
-    val r           = new Rectangle2D.Float()
-    val rr          = new RoundRectangle2D.Float(0f, 0f, 0f, 0f, 2f, 2f)
-    var invalid     = true
-    var done        = false
+    var readOnly                  = false
+    var selected                  = false
+    var connections : Array[Node] = Node.NO_CONNECTIONS
+    var label       : String      = null
+    val r                         = new Rectangle2D.Float()
+    val rr                        = new RoundRectangle2D.Float(0f, 0f, 0f, 0f, 2f, 2f)
+    var invalid                   = true
+    var done                      = false
     // for dnd
-    var cx          = 0f
-    var cy          = 0f
-    var tx          = 0f
-    var ty          = 0f
+    var cx                        = 0f
+    var cy                        = 0f
+    var tx                        = 0f
+    var ty                        = 0f
 
     // dnd
-    var dirty       = false
-    var oldX        = 0f
-    var oldY        = 0f
+    var dirty                     = false
+    var oldX                      = 0f
+    var oldY                      = 0f
 
     def this(idx: Int, orig: Node) {
       this(idx)

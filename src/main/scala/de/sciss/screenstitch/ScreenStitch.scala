@@ -2,7 +2,7 @@
  * ScreenStitch.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2016 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -26,7 +26,7 @@ object ScreenStitch {
       def run(): Unit = new ScreenStitch
     })
 
-  def linexp(x: Double, inLo: Double, inHi: Double, outLo: Double, outHi: Double): Double =
+  def linExp(x: Double, inLo: Double, inHi: Double, outLo: Double, outHi: Double): Double =
     math.pow(outHi / outLo, (x - inLo) / (inHi - inLo)) * outLo
 }
 
@@ -79,7 +79,7 @@ class ScreenStitch {
     val ggZoom = new JSlider(SwingConstants.HORIZONTAL, 0, 0x10000, 0x10000)
     ggZoom.addChangeListener(new ChangeListener {
       def stateChanged(e: ChangeEvent): Unit =
-        view.setZoom(ScreenStitch.linexp(ggZoom.getValue, 0, 0x10000, 0.03125, 1).toFloat)
+        view.setZoom(ScreenStitch.linExp(ggZoom.getValue, 0, 0x10000, 0.03125, 1).toFloat)
     })
     cp.add(ggZoom, BorderLayout.SOUTH)
 
@@ -157,6 +157,15 @@ class ScreenStitch {
       }
     })
     m.add(miEditQuality)
+
+    m = new JMenu("Settings")
+    mb.add(m)
+    m.add(new JCheckBoxMenuItem(new AbstractAction("Fuzzy Matching") {
+      def actionPerformed(e: ActionEvent): Unit = {
+        val but     = e.getSource.asInstanceOf[AbstractButton]
+        view.fuzzy = but.isSelected // if (but.isSelected) 0.1 else 0.0
+      }
+    }))
 
     frame.setJMenuBar(mb)
     frame.pack()

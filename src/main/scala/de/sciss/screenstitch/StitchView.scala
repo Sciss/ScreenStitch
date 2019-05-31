@@ -2,7 +2,7 @@
  * StitchView.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2016 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -27,36 +27,36 @@ import scala.collection.mutable.ListBuffer
 class StitchView
   extends JComponent // JPanel // JComponent
   // WARNING: bug in JComponent : when a JComponent is inside a JPanel
-  // which is the view of a scrollpane's viewport, the display is truncted
+  // which is the view of a scrollpane's viewport, the display is truncated
   // to 16384 pixels!!! for whatever reason, subclassing JPanel instead
   // fixes the problem
   with Zoomable {
   
-  private var dirty       = false
-  private val jitter      = 32
-  private val shpStitch   = new GeneralPath()
-  private val strkStitch  = new BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER)
+  private var dirty         = false
+  private val jitter        = 24 // 32
+  private val shpStitch     = new GeneralPath()
+  private val strokeStitch  = new BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER)
   private var jitPt       : Vec[Point] = _
 
-  private var viewPort    = Option.empty[JViewport]
+  private var viewPort      = Option.empty[JViewport]
 
-  private var drag        = Option.empty[StitchDrag]
+  private var drag          = Option.empty[StitchDrag]
 
-  private var alignThread = Option.empty[Thread]
+  private var alignThread   = Option.empty[Thread]
 
-  private var dirtyAction = Option.empty[Boolean => Unit]
+  private var dirtyAction   = Option.empty[Boolean => Unit]
 
   @volatile private var alignKeepRunning = true
-  private var beep        = 0L
-  private var beepColor   = Color.white
+  private var beep          = 0L
+  private var beepColor     = Color.white
 
   // doc data
-  private val collImg     = ListBuffer[StitchImage]()
-  private val stitches    = ListBuffer[Stitch]()
+  private val collImg       = ListBuffer[StitchImage]()
+  private val stitches      = ListBuffer[Stitch]()
 
   // ---- constructor ----
   {
-    recalcBounds()
+    recalculateBounds()
     //		setPreferredSize( new Dimension( 800, 800 ))
 
     shpStitch.moveTo(-30, 30)
@@ -66,9 +66,13 @@ class StitchView
     shpStitch.lineTo(30, 30)
 
     val unsorted = new ListBuffer[Point]()
+    val jitSq = jitter *  jitter
     for (x <- -jitter to jitter) {
       for (y <- -jitter to jitter) {
-        unsorted += new Point(x, y)
+        val rdSq = x * x + y * y
+        if (rdSq <= jitSq) {
+          unsorted += new Point(x, y)
+        }
       }
     }
     jitPt = unsorted.sortWith((pt1, pt2) => pt1.x * pt1.x + pt1.y * pt1.y < pt2.x * pt2.x + pt2.y * pt2.y).toIndexedSeq
@@ -83,16 +87,16 @@ class StitchView
         if (alignThread.isDefined) return
 
         drag = None
-        val virtPt = screenToVirtual(e.getPoint)
-        val oimg = collImg.find(_.bounds.contains(virtPt))
-        if (oimg.isDefined) {
-          val img1 = oimg.get
+        val vPt = screenToVirtual(e.getPoint)
+        val oImg = collImg.find(_.bounds.contains(vPt))
+        if (oImg.isDefined) {
+          val img1 = oImg.get
           if (e.isAltDown) {
             removeImage(img1)
           } else if (e.getClickCount == 2) {
-            collImg.find(img => (img != img1) && img.bounds.contains(virtPt)).foreach { img2 =>
+            collImg.find(img => (img != img1) && img.bounds.contains(vPt)).foreach { img2 =>
               if (areStitched(img1, img2)) {
-                unstitch(img1, img2)
+                unStitch(img1, img2)
               } else {
                 autoAlign(img1, img2)
               }
@@ -106,7 +110,7 @@ class StitchView
       override def mouseReleased(e: MouseEvent): Unit =
         drag.foreach { d =>
           if (d.started) {
-            recalcBounds()
+            recalculateBounds()
             repaint()
           }
           drag = None
@@ -141,7 +145,7 @@ class StitchView
     setOpaque(false)
   }
 
-  def isDirty = dirty
+  def isDirty: Boolean = dirty
 
   private def makeDirty(): Unit =
     changeModified(b = true)
@@ -172,7 +176,7 @@ class StitchView
   def read(ois: DataInputStream): Unit = {
     clear()
     val numImages = ois.readInt
-    for (i <- 0 until numImages) {
+    for (_ <- 0 until numImages) {
       val fileName  = ois.readUTF
       val x         = ois.readInt
       val y         = ois.readInt
@@ -182,15 +186,17 @@ class StitchView
       collImg += img
     }
     val numStitches = ois.readInt
-    for (i <- 0 until numStitches) {
+    for (_ <- 0 until numStitches) {
       val idx1      = ois.readInt
       val idx2      = ois.readInt
       val stitch    = Stitch(collImg(idx1), collImg(idx2))
       stitches += stitch
     }
-    recalcBounds()
+    recalculateBounds()
     repaint()
   }
+
+  var fuzzy = false
 
   def clear(): Unit = {
     collImg.clear()
@@ -198,11 +204,11 @@ class StitchView
     beep = 0L
     drag = None
     makeTidy()
-    recalcBounds()
+    recalculateBounds()
     repaint()
   }
 
-  def setDirtyAction(fun: (Boolean) => Unit): Unit =
+  def setDirtyAction(fun: Boolean => Unit): Unit =
     dirtyAction = Some(fun)
 
   def createPDF(file: File): Unit = {
@@ -242,7 +248,7 @@ class StitchView
   def areStitched(img1: StitchImage, img2: StitchImage): Boolean =
     img1.stitches.exists(s => s.img1 == img2 || s.img2 == img2)
 
-  def unstitch(img1: StitchImage, img2: StitchImage): Unit = {
+  def unStitch(img1: StitchImage, img2: StitchImage): Unit = {
     def remove(img: StitchImage): Unit = {
       val st = img.stitches.filter(s => (s.img1 == img1 && s.img2 == img2) || (s.img1 == img2 && s.img2 == img1))
       img.stitches -- st
@@ -272,7 +278,7 @@ class StitchView
               img1.stitches += stitch
               img2.stitches += stitch
               stitches += stitch
-              recalcBounds()
+              recalculateBounds()
             } else {
               beepColor = Color.red
             }
@@ -292,8 +298,8 @@ class StitchView
   }
 
   private def calcBestMove(img1: StitchImage, img2: StitchImage): Option[Point] = {
-    val bestMove = new Point(0, 0)
-    var bestRMS = Double.MaxValue
+    val bestMove  = new Point(0, 0)
+    var bestRMS   = Double.MaxValue
 
     jitPt.foreach { pt =>
       if (!alignKeepRunning) return None
@@ -307,11 +313,11 @@ class StitchView
           bestRMS = rms
           bestMove.x = pt.x
           bestMove.y = pt.y
-          if (rms == 0) return Some(bestMove)
+          if (rms == 0.0) return Some(bestMove)
         }
       }
     }
-    None
+    if (fuzzy) Some(bestMove) else None
   }
 
   private def calcRMS(img1: StitchImage, img2: StitchImage, ru: Rectangle, pt: Point): Double = {
@@ -346,14 +352,14 @@ class StitchView
     makeDirty()
     collImg -= img
     stitches --= img.stitches
-    recalcBounds()
+    recalculateBounds()
     repaint()
   }
 
   def importImage(f: File): Unit =
     try {
-      val bimg = ImageIO.read(f)
-      val stitch = new StitchImage(f.getAbsolutePath, bimg)
+      val bImg = ImageIO.read(f)
+      val stitch = new StitchImage(f.getAbsolutePath, bImg)
       if (viewPort.isDefined) {
         val pt = viewPort.get.getViewPosition
         stitch.bounds.x = ((pt.x / zoom) + virtualRect.x).toInt
@@ -361,11 +367,11 @@ class StitchView
       }
       makeDirty()
       collImg.prepend(stitch)
-      recalcBounds()
+      recalculateBounds()
       repaint() // stitch.x, stitch.y, stitch.bimg.getWidth, stitch.bimg.getHeight
     }
     catch {
-      case e: IOException =>
+      case _: IOException =>
     }
 
   def screenSizeUpdated(d: Dimension): Unit = {
@@ -390,7 +396,7 @@ class StitchView
     new Rectangle(minX, minY, maxX - minX, maxY - minY)
   }
 
-  private def recalcBounds(): Unit = {
+  private def recalculateBounds(): Unit = {
     if (collImg.isEmpty) {
       setVirtualBounds(0, 0, 400, 400)
       return
@@ -443,8 +449,8 @@ class StitchView
     if (extras) {
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
       g2.setColor(Color.yellow)
-      val strkOrig = g2.getStroke
-      g2.setStroke(strkStitch)
+      val strokeOrig = g2.getStroke
+      g2.setStroke(strokeStitch)
       stitches.foreach(s => {
         val ri = s.img2.bounds.intersection(s.img1.bounds)
         val atOrig = g2.getTransform
@@ -452,7 +458,7 @@ class StitchView
         g2.draw(shpStitch)
         g2.setTransform(atOrig)
       })
-      g2.setStroke(strkOrig)
+      g2.setStroke(strokeOrig)
 
       g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
       g2.setColor(Color.red)
@@ -469,8 +475,8 @@ class StitchView
 case class Stitch(img1: StitchImage, img2: StitchImage)
 
 class StitchDrag(val img: StitchImage, val e: MouseEvent) {
-  var started = false
-  val origPos = img.bounds.getLocation
+  var started         = false
+  val origPos: Point  = img.bounds.getLocation
 }
 
 class StitchImage(val fileName: String, val bImg: BufferedImage) {
