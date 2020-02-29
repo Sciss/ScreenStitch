@@ -1,7 +1,7 @@
 name          := "ScreenStitch"
 version       := "0.12.0-SNAPSHOT"
 organization  := "de.sciss"
-scalaVersion  := "2.12.8"
+scalaVersion  := "2.12.10"
 description   := "Arrange various screenshots (typically from maps) and glue the parts together"
 homepage      := Some(url(s"https://github.com/Sciss/${name.value}"))
 licenses      := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
