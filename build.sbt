@@ -1,15 +1,15 @@
 name          := "ScreenStitch"
 version       := "0.12.0-SNAPSHOT"
 organization  := "de.sciss"
-scalaVersion  := "2.12.10"
+scalaVersion  := "2.13.2"
 description   := "Arrange various screenshots (typically from maps) and glue the parts together"
-homepage      := Some(url(s"https://github.com/Sciss/${name.value}"))
+homepage      := Some(url(s"https://git.iem.at/sciss/${name.value}"))
 licenses      := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt"))
 
 libraryDependencies +=
-  "com.itextpdf" % "itextpdf" % "5.5.13"
+  "com.itextpdf" % "itextpdf" % "5.5.13.1"
 
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xfuture", "-Xlint")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-Xsource:2.13", "-Xlint")
 
 // ---- publishing ----
 
@@ -28,8 +28,8 @@ pomIncludeRepository := { _ => false }
 
 pomExtra := { val n = name.value
 <scm>
-  <url>git@github.com:Sciss/{n}.git</url>
-  <connection>scm:git:git@github.com:Sciss/{n}.git</connection>
+  <url>git@git.iem.at:sciss/{n}.git</url>
+  <connection>scm:git:git@git.iem.at:sciss/{n}.git</connection>
 </scm>
 <developers>
    <developer>

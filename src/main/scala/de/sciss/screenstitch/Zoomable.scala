@@ -2,7 +2,7 @@
  * Zoomable.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2020 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -18,14 +18,14 @@ trait Zoomable {
   private   var clipTopAmt  = 0f
   protected var clipTopPx   = 0
   protected val virtualRect = new Rectangle(0, 0, 400, 400)
-  private   var slaves      = List.empty[Zoomable]
+  private   var clients      = List.empty[Zoomable]
 
   def setZoom(x: Float): Unit = {
     if (zoom != x) {
       zoom = x
       updateScreenSize()
     }
-    slaves.foreach(_.setZoom(x))
+    clients.foreach(_.setZoom(x))
   }
 
   // stupid fix for >16384 px problem
@@ -35,7 +35,7 @@ trait Zoomable {
       clipLeftPx = (virtualRect.width * clipLeftAmt).toInt
       updateScreenSize()
     }
-    slaves.foreach(_.clipLeft(amount))
+    clients.foreach(_.clipLeft(amount))
   }
 
   // stupid fix for >16384 px problem
@@ -45,14 +45,14 @@ trait Zoomable {
       clipTopPx = (virtualRect.height * clipTopAmt).toInt
       updateScreenSize()
     }
-    slaves.foreach(_.clipTop(amount))
+    clients.foreach(_.clipTop(amount))
   }
 
-  def addSlave(z: Zoomable): Unit =
-    slaves ::= z
+  def addClient(z: Zoomable): Unit =
+    clients ::= z
 
-  def removeSlave(z: Zoomable): Unit =
-    slaves = slaves.diff(List(z)) // ??? terrible
+  def removeClient(z: Zoomable): Unit =
+    clients = clients.diff(List(z)) // ??? terrible
 
   private def updateScreenSize(): Unit = {
     val scrW = (virtualRect.width  * zoom * (1.0f - clipLeftAmt)).toInt
@@ -70,7 +70,7 @@ trait Zoomable {
     clipTopPx = (virtualRect.width * clipTopAmt).toInt
     updateScreenSize()
 
-    slaves.foreach(_.setVirtualBounds(x, y, w, h))
+    clients.foreach(_.setVirtualBounds(x, y, w, h))
   }
 
   def screenSizeUpdated(d: Dimension): Unit

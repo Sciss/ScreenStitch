@@ -2,7 +2,7 @@
  * ScreenStitch.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2020 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -70,8 +70,8 @@ class ScreenStitch {
     val vp = ggScroll.getViewport
     view.setViewPort(vp)
     view.setDirtyAction(b => setDirty(b))
-    view.addSlave(checker)
-    view.addSlave(poly)
+    view.addClient(checker)
+    view.addClient(poly)
 
     cp.add(ggScroll, BorderLayout.CENTER)
     ggScroll.setPreferredSize(new Dimension(400, 400))
@@ -427,8 +427,8 @@ class ScreenStitch {
     if (n1 == n2) return n1
     val beg = n1 zip n2
     val end = beg.reverse
-    val i = beg.prefixLength { case (a, b) => a == b }
-    val j = end.prefixLength { case (a, b) => a == b }
+    val i = beg.segmentLength { case (a, b) => a == b }
+    val j = end.segmentLength { case (a, b) => a == b }
     n1.substring(0, i) + n1.substring(n1.length() - j)
   }
 

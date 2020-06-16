@@ -2,7 +2,7 @@
  * FileDropHandler.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2020 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -11,9 +11,12 @@ package de.sciss.screenstitch
 
 import java.awt.datatransfer.{DataFlavor, Transferable}
 import java.io.File
+
 import javax.swing.{JComponent, TransferHandler}
 
-class FileDropHandler(acceptAction: (File) => Unit)
+import scala.jdk.CollectionConverters._
+
+class FileDropHandler(acceptAction: File => Unit)
   extends TransferHandler {
 
   private val fileFlavor = DataFlavor.javaFileListFlavor
@@ -24,8 +27,7 @@ class FileDropHandler(acceptAction: (File) => Unit)
     if (!t.isDataFlavorSupported(fileFlavor)) return false
 
     val data = t.getTransferData(fileFlavor).asInstanceOf[java.util.List[File]]
-    import scala.collection.JavaConversions._
-    data.foreach(acceptAction(_))
+    data.asScala.foreach(acceptAction(_))
     true
   }
 }

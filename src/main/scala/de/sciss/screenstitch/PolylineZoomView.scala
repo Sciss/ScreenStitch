@@ -2,7 +2,7 @@
  * PolylineZoomView.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2020 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */

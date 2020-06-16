@@ -2,7 +2,7 @@
  * StitchView.scala
  * (ScreenStitch)
  *
- * Copyright (C) 2009-2019 Hanns Holger Rutz. All rights reserved.
+ * Copyright (C) 2009-2020 Hanns Holger Rutz. All rights reserved.
  *
  * Published under the GNU Lesser General Public License (LGPL) v3
  */
@@ -15,13 +15,14 @@ import java.awt.image.BufferedImage
 import java.awt.{BasicStroke, Color, Cursor, Dimension, EventQueue, Graphics, Graphics2D, Point, Rectangle, RenderingHints}
 import java.io.{DataInputStream, DataOutputStream, File, FileOutputStream, IOException}
 import java.util.{Timer, TimerTask}
+
 import javax.imageio.ImageIO
 import javax.swing.event.MouseInputAdapter
 import javax.swing.{JComponent, JViewport}
-
 import com.itextpdf.text
 
 import scala.collection.immutable.{IndexedSeq => Vec}
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class StitchView
@@ -51,8 +52,8 @@ class StitchView
   private var beepColor     = Color.white
 
   // doc data
-  private val collImg       = ListBuffer[StitchImage]()
-  private val stitches      = ListBuffer[Stitch]()
+  private val collImg       = mutable.Buffer[StitchImage]()
+  private val stitches      = mutable.Buffer[Stitch]()
 
   // ---- constructor ----
   {
@@ -251,8 +252,8 @@ class StitchView
   def unStitch(img1: StitchImage, img2: StitchImage): Unit = {
     def remove(img: StitchImage): Unit = {
       val st = img.stitches.filter(s => (s.img1 == img1 && s.img2 == img2) || (s.img1 == img2 && s.img2 == img1))
-      img.stitches -- st
-      stitches -- st
+      img.stitches subtractAll st
+      stitches subtractAll st
     }
 
     remove(img1)
@@ -469,7 +470,7 @@ class StitchView
     g2.setTransform(atOrig)
   }
 
-  def imageFiles: Vec[File] = collImg.map(i => new File(i.fileName))(collection.breakOut)
+  def imageFiles: Vec[File] = collImg.iterator.map(i => new File(i.fileName)).toIndexedSeq
 }
 
 case class Stitch(img1: StitchImage, img2: StitchImage)
@@ -480,6 +481,6 @@ class StitchDrag(val img: StitchImage, val e: MouseEvent) {
 }
 
 class StitchImage(val fileName: String, val bImg: BufferedImage) {
-  val bounds    = new Rectangle(0, 0, bImg.getWidth, bImg.getHeight)
-  val stitches  = new ListBuffer[Stitch]()
+  val bounds                            = new Rectangle(0, 0, bImg.getWidth, bImg.getHeight)
+  val stitches: mutable.Buffer[Stitch]  = mutable.Buffer.empty
 }
