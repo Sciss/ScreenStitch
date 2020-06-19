@@ -1,5 +1,7 @@
 # ScreenStitch
 
+[![Build Status](https://travis-ci.org/Sciss/ScreenStitch.svg?branch=main)](https://travis-ci.org/Sciss/ScreenStitch)
+
 ## statement
 
 ScreenStitch is a desktop application written in the Scala programming language which allows to quickly assemble
